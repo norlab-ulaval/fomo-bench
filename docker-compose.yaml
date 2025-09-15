@@ -150,6 +150,9 @@ services:
     user: "1000:1000"
     environment:
       TEST_MODE: ${TEST_MODE}
+      MAPPING_DATE: ${MAPPING_DATE:-}
+      LOCALIZATION_DATE: ${LOCALIZATION_DATE:-}
+      SLAM_NAME: ${SLAM_NAME:-}
     volumes:
       - ${REFERENCE_TRAJECTORY_FILE_HOST:-/reference_trajectory.txt}:/reference_trajectory.txt
       - ${ESTIMATED_TRAJECTORY_FILE_HOST:-/estimated_trajectory.txt}:/estimated_trajectory.txt
