@@ -1,11 +1,17 @@
-FROM ros:noetic
+ARG BASE_IMAGE=arm64v8/ros:humble
+FROM ${BASE_IMAGE}
+
+# Fix for Hash Sum mismatch error
+# from this link https://stackoverflow.com/questions/67732260/how-to-fix-hash-sum-mismatch-in-docker-on-mac
+RUN echo "Acquire::http::Pipeline-Depth 0;" > /etc/apt/apt.conf.d/99custom && \
+    echo "Acquire::http::No-Cache true;" >> /etc/apt/apt.conf.d/99custom && \
+    echo "Acquire::BrokenProxy    true;" >> /etc/apt/apt.conf.d/99custom
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    ros-noetic-rosbag \
-    ros-noetic-roslaunch \
-    ros-noetic-rospy \
     python3-pip \
+    ros-humble-rosbag2-storage-mcap \
+    ros-humble-foxglove-bridge \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

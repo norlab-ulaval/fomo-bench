@@ -1,62 +1,50 @@
 # This file is configured for a secure, isolated ROS network.
 
 services:
-  roscore:
-    image: ghcr.io/comrob/slam-bench:latest
-    container_name: roscore
-    hostname: roscore
-    networks:
-      - ros-net
-    command: roscore
-    ports:
-      - "11311:11311" # Expose master port for host-based debugging tools
-    environment:
-      # The roscore advertises its own hostname.
-      ROS_HOSTNAME: roscore
-    healthcheck:
-      test: ["CMD", "bash", "-c", "source /app/entrypoints/ros_entrypoint.sh && rostopic list"]
-      interval: 1s
-      timeout: 3s
-      retries: 30
-
   record_odometry:
-    image: ghcr.io/comrob/slam-bench:latest
+    image: fomo-bench:latest
     init: true
     container_name: record_odometry
     hostname: record_odometry
     networks:
       - ros-net
     user: "1000:1000"
-    depends_on:
-      roscore:
-        condition: service_healthy
     environment:
-      # Explicit ROS network configuration
-      ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: record_odometry
+      # ROS2 Domain ID for network isolation
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+      # ROS2 Discovery configuration
+      ROS_DISCOVERY_SERVER: ${ROS_DISCOVERY_SERVER:-}
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+      # Network configuration for containerized environments
+      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
       # Service-specific variables
       ROS_HOME: /tmp/.ros
       OUTPUT_FILE_NAME: ${OUTPUT_FILE_NAME}
       OUTPUT_PATH_HOST: ${OUTPUT_PATH_HOST}
     volumes:
       - ${OUTPUT_PATH_HOST}:/trajectory_files
+      # Optional: Share DDS configuration
+      - /dev/shm:/dev/shm
     entrypoint: ["/app/entrypoints/entrypoint_record_odometry.sh"]
+    # Optional: IPC mode for better performance with other ROS2 containers
+    ipc: host
 
   play_bag:
-    image: ghcr.io/comrob/slam-bench:latest
+    image: fomo-bench:latest
     init: true
     container_name: play_bag
     hostname: play_bag
     networks:
       - ros-net
     user: "1000:1000"
-    depends_on:
-      roscore:
-        condition: service_healthy
     environment:
-      # Explicit ROS network configuration
-      ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: play_bag
+      # ROS2 Domain ID for network isolation
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+      # ROS2 Discovery configuration
+      ROS_DISCOVERY_SERVER: ${ROS_DISCOVERY_SERVER:-}
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+      # Network configuration for containerized environments
+      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
       # Service-specific variables
       BAGFILES_PATH_HOST: ${BAGFILES_PATH_HOST}
       BAGFILE_NAME: ${BAGFILE_NAME:-sensors}
@@ -65,59 +53,99 @@ services:
       ROS_HOME: /tmp/.ros
     volumes:
       - ${BAGFILES_PATH_HOST}:/rosbag_files
+      # Optional: Share DDS configuration
+      - /dev/shm:/dev/shm
     entrypoint: ["/app/entrypoints/entrypoint_play_bag.sh"]
-  
-  run_slam_nvidia:
-    image: ${SLAM_IMAGE:-$CRL_SLAM_IMAGE}
-    container_name: run_slam_nvidia
-    hostname: run_slam_nvidia
+    # Optional: IPC mode for better performance with other ROS2 containers
+    ipc: host
+
+  run_foxglove:
+    image: fomo-bench:latest
+    init: true
+    container_name: run_foxglove
+    hostname: run_foxglove
     networks:
       - ros-net
-    depends_on:
-      roscore:
-        condition: service_healthy
+    user: "1000:1000"
+    ports:
+      - "8772:8772"
     environment:
-      # Explicit ROS network configuration
-      ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: run_slam_nvidia
+      # ROS2 Domain ID for network isolation
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+      # ROS2 Discovery configuration
+      ROS_DISCOVERY_SERVER: ${ROS_DISCOVERY_SERVER:-}
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+      # Network configuration for containerized environments
+      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
       # Service-specific variables
-      DISPLAY: ${DISPLAY}
-      NVIDIA_VISIBLE_DEVICES: all
-      NVIDIA_DRIVER_CAPABILITIES: compute,utility
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+      ROS_HOME: /tmp/.ros
+      OUTPUT_FILE_NAME: ${OUTPUT_FILE_NAME}
+      OUTPUT_PATH_HOST: ${OUTPUT_PATH_HOST}
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix
-      - ${SLAM_CONFIG_OVERRIDE_FILE:-/dev/null}:/config/override.yaml
+      - ${OUTPUT_PATH_HOST}:/trajectory_files
+      # Optional: Share DDS configuration
+      - /dev/shm:/dev/shm
+    entrypoint: ["/app/entrypoints/entrypoint_foxglove.sh"]
+    # Optional: IPC mode for better performance with other ROS2 containers
+    ipc: host
+
+  # run_slam_nvidia:
+  #   image: ${SLAM_IMAGE:-$CRL_SLAM_IMAGE}
+  #   container_name: run_slam_nvidia
+  #   hostname: run_slam_nvidia
+  #   networks:
+  #     - ros-net
+  #   depends_on:
+  #     roscore:
+  #       condition: service_healthy
+  #   environment:
+  #     # Explicit ROS network configuration
+  #     ROS_MASTER_URI: http://roscore:11311
+  #     ROS_HOSTNAME: run_slam_nvidia
+  #     # Service-specific variables
+  #     DISPLAY: ${DISPLAY}
+  #     NVIDIA_VISIBLE_DEVICES: all
+  #     NVIDIA_DRIVER_CAPABILITIES: compute,utility
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
+  #   volumes:
+  #     - /tmp/.X11-unix:/tmp/.X11-unix
+  #     - ${SLAM_CONFIG_OVERRIDE_FILE:-/dev/null}:/config/override.yaml
 
   run_slam:
-    image: ${SLAM_IMAGE:-$CRL_SLAM_IMAGE}
+    image: ${SLAM_IMAGE}
     container_name: run_slam
     hostname: run_slam
     networks:
       - ros-net
-    depends_on:
-      roscore:
-        condition: service_healthy
     environment:
-      # Explicit ROS network configuration
-      ROS_MASTER_URI: http://roscore:11311
-      ROS_HOSTNAME: run_slam
+      # ROS2 Domain ID for network isolation
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+      # ROS2 Discovery configuration
+      ROS_DISCOVERY_SERVER: ${ROS_DISCOVERY_SERVER:-}
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+      # Network configuration for containerized environments
+      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
       # Service-specific variables
-      DISPLAY: ${DISPLAY}
+      ROS_HOME: /tmp/.ros
+      OUTPUT_FILE_NAME: ${OUTPUT_FILE_NAME}
+      OUTPUT_PATH_HOST: ${OUTPUT_PATH_HOST}
+      # Service-specific variables
+      # DISPLAY: ${DISPLAY}
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix
+      # - /tmp/.X11-unix:/tmp/.X11-unix
       - ${SLAM_CONFIG_OVERRIDE_FILE:-./config/slam/override_config.yaml.example}:/config/override.yaml
+      - ${CALIB_PATH_HOST}:/calib
 
   # This service does not perform ROS communication, so it doesn't need network config.
   evaluate_trajectory:
     init: true
-    image: ghcr.io/comrob/slam-bench:latest
+    image: fomo-bench:latest
     container_name: evaluate_trajectory
     user: "1000:1000"
     environment:

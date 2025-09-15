@@ -5,7 +5,6 @@ set -e
 # Source ROS environment. roscore is guaranteed to be running by docker-compose.
 source /opt/ros/humble/setup.bash
 
-echo "Starting odometry logger..."
+echo "Starting foxglove server..."
 
-# The main command is all that's left.
-python3 scripts/odometry_logger.py
+ros2 launch foxglove_bridge foxglove_bridge_launch.xml send_buffer_limit:=1000000000 port:=8772

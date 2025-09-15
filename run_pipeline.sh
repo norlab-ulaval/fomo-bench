@@ -85,7 +85,7 @@ mkdir -p "$OUTPUT_PATH_HOST"
 
 info "Starting SLAM services in the background..."
 # Start SLAM and odometry recorder in detached mode
-$DOCKER_COMPOSE_CMD up -d run_slam record_odometry
+$DOCKER_COMPOSE_CMD up -d run_slam record_odometry run_foxglove
 
 info "Verifying that background services are running..."
 sleep 5 # Give services a moment to start or fail. Adjust if your SLAM system takes longer to initialize.

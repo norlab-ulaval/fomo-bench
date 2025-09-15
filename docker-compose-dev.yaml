@@ -1,17 +1,28 @@
 services:
-  roscore:
-    build: .
-    image: slam-bench:latest
-
   play_bag:
-    build: .
-    image: slam-bench:latest
+    build:
+      context: .
+      args:
+        BASE_IMAGE: ${BASE_IMAGE}
+    image: fomo-bench:latest
 
   evaluate_trajectory:
-    build: .
-    image: slam-bench:latest
-  
+    build:
+      context: .
+      args:
+        BASE_IMAGE: ${BASE_IMAGE}
+    image: fomo-bench:latest
+
   record_odometry:
-    build: .
-    image: slam-bench:latest
-  
+    build:
+      context: .
+      args:
+        BASE_IMAGE: ${BASE_IMAGE}
+    image: fomo-bench:latest
+
+  run_foxglove:
+    build:
+      context: .
+      args:
+        BASE_IMAGE: ${BASE_IMAGE}
+    image: fomo-bench:latest
