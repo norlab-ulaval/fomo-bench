@@ -15,6 +15,12 @@ from evo.core.trajectory import PoseTrajectory3D
 # =============================================================================
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Evaluate trajectories using APE and RPE metrics.")
+    parser.add_argument("--mapping_date", default="",
+                        help="Date of the deployment used for the mapping")
+    parser.add_argument("--localization_date", default="",
+                        help="Date of the deployment used for localization")
+    parser.add_argument("--slam", default="",
+                        help="Named of the SLAM used")
     parser.add_argument("--gt", default="/reference_trajectory.txt",
                         help="Path to the ground truth trajectory file")
     parser.add_argument("--est", default="/estimated_trajectory.txt",
@@ -95,13 +101,13 @@ def compute_rpe_for_delta(traj_pair, delta_meters):
     pose_relation = metrics.PoseRelation.translation_part
     delta_unit = metrics.Unit.meters
     rpe_metric = metrics.RPE(pose_relation, delta_meters, delta_unit, all_pairs=True)
-    
+
     try:
         rpe_metric.process_data(traj_pair)
     except Exception as e:
         print(f"Error processing RPE for delta {delta_meters}: {e}")
         return None
-    
+
     return rpe_metric.get_all_statistics()
 
 def compute_rpe_set(traj_pair, delta_list):
@@ -171,6 +177,29 @@ def export_results_to_yaml(filename, avg_relative_rpe, ate_rmse, rpe_results):
 # =============================================================================
 # Visualization Functions
 # =============================================================================
+def plot_trajectory_timestamp(ax, traj_ref, traj_est, coord: str):
+    """
+    Plot the given coordinates (reference and estimated) on the given axis
+    as a function of time.
+    """
+    index = 0
+    if coord.lower() == "x":
+        index = 0
+    elif coord.lower() == "y":
+        index = 1
+    elif coord.lower() == "z":
+        index = 2
+    ax.plot(traj_ref.timestamps, traj_ref.positions_xyz[:, index],
+            label="Reference", linestyle='-', marker='o', markersize=2)
+    ax.plot(traj_est.timestamps, traj_est.positions_xyz[:, index],
+            label="Estimated", linestyle='-', marker='x', markersize=2)
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel(f"{coord.capitalize()} Position (m)")
+    ax.set_title(f"{coord.capitalize()} Trajectory Plot")
+    ax.legend()
+    ax.grid()
+    ax.set_aspect('equal', adjustable='datalim')
+
 def plot_trajectory_xy(ax, traj_ref, traj_est):
     """
     Plot the XY trajectories (reference and estimated) on the given axis.
@@ -215,13 +244,13 @@ def plot_trajectory_3d(ax, traj_ref, traj_est):
     ax.grid()
     set_equal_aspect_3d(ax, traj_ref.positions_xyz)
 
-def plot_summary_table(ax, avg_relative_rpe, ate_rmse):
+def plot_summary_table(ax, avg_relative_rpe, ate_rmse, mapping_date: str, localization_date: str, slam: str):
     """
     Plot a summary table of the computed metrics.
     """
     ax.axis('tight')
     ax.axis('off')
-    ax.set_title("SUMMARY METRICS", fontsize=12, fontweight='bold')
+    ax.set_title(f"SUMMARY METRICS\n({mapping_date} to {localization_date})\nMethod: {slam}", fontsize=12, fontweight='bold')
     table_data = [[f"{avg_relative_rpe:.2f} %", f"{ate_rmse:.3f} m"]]
     col_labels = ["AVG RMSE RPE (%)", "ATE RMSE (m)"]
     table = ax.table(cellText=table_data, colLabels=col_labels, loc='center', cellLoc='center')
@@ -241,7 +270,7 @@ def plot_rpe_details_table(ax, rpe_table):
     table.set_fontsize(9)
     table.scale(1.0, 4.0)
 
-def create_figure(traj_ref, traj_est, rpe_table, avg_relative_rpe, ate_rmse, save_path):
+def create_figure(traj_ref, traj_est, rpe_table, avg_relative_rpe, ate_rmse, save_path, mapping_date: str, localization_date: str, slam: str):
     """
     Create and save a figure with:
     - XY trajectory plot
@@ -249,20 +278,24 @@ def create_figure(traj_ref, traj_est, rpe_table, avg_relative_rpe, ate_rmse, sav
     - 3D trajectory plot
     - RPE details table
     """
-    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
-
-    # XY Trajectory Plot
-    plot_trajectory_xy(axs[0, 0], traj_ref, traj_est)
+    fig, axs = plt.subplots(3, 2, figsize=(12, 16))
 
     # Summary Table
-    plot_summary_table(axs[0, 1], avg_relative_rpe, ate_rmse)
-
-    # 3D Trajectory Plot (added as subplot 3)
-    ax_3d = fig.add_subplot(2, 2, 3, projection='3d')
-    plot_trajectory_3d(ax_3d, traj_ref, traj_est)
+    plot_summary_table(axs[0, 0], avg_relative_rpe, ate_rmse, mapping_date, localization_date, slam)
 
     # RPE Details Table
-    plot_rpe_details_table(axs[1, 1], rpe_table)
+    plot_rpe_details_table(axs[0, 1], rpe_table)
+
+    plot_trajectory_timestamp(axs[1, 0], traj_ref, traj_est, "x")
+    plot_trajectory_timestamp(axs[1, 1], traj_ref, traj_est, "y")
+    plot_trajectory_timestamp(axs[2, 0], traj_ref, traj_est, "z")
+
+    # XY Trajectory Plot
+    plot_trajectory_xy(axs[2, 1], traj_ref, traj_est)
+
+    # 3D Trajectory Plot (added as subplot 3)
+    # ax_3d = fig.add_subplot(4, 2, 7, projection='3d')
+    # plot_trajectory_3d(ax_3d, traj_ref, traj_est)
 
     plt.tight_layout()
     plt.savefig(save_path, format="pdf", dpi=300)
@@ -296,4 +329,4 @@ if __name__ == '__main__':
     export_results_to_yaml(yaml_filename, avg_relative_rpe, ate_rmse, rpe_results)
 
     pdf_filename = os.path.join(args.output, "trajectory_analysis.pdf")
-    create_figure(traj_pair[0], traj_pair[1], rpe_table, avg_relative_rpe, ate_rmse, pdf_filename)
+    create_figure(traj_pair[0], traj_pair[1], rpe_table, avg_relative_rpe, ate_rmse, pdf_filename, args.mapping_date, args.localization_date, args.slam)
