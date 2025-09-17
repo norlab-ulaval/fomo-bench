@@ -153,66 +153,66 @@ if [[ "${DEV_DOCKER:-false}" == "true" ]]; then
     DOCKER_COMPOSE_CMD="docker compose -f docker-compose.yaml -f docker-compose-dev.yaml"
 fi
 
-# # Safety check before removing the output directory
-# if [ -z "$OUTPUT_PATH_HOST" ]; then
-#     error "OUTPUT_PATH_HOST is not set in .env. Aborting..."
-#     exit 1
-# fi
-# info "Checking for an old output directory in: $OUTPUT_PATH_HOST"
-# # Only remove if the directory actually exists
-# if [ -d "$OUTPUT_PATH_HOST" ]; then
-#     rm -rf "$OUTPUT_PATH_HOST"
-#     success "Previous output directory removed."
-# else
-#     warn "Previous output directory not found. Nothing to remove."
-# fi
-# # Create the output directory for the new run
-# mkdir -p "$OUTPUT_PATH_HOST"
+# Safety check before removing the output directory
+if [ -z "$OUTPUT_PATH_HOST" ]; then
+    error "OUTPUT_PATH_HOST is not set in .env. Aborting..."
+    exit 1
+fi
+info "Checking for an old output directory in: $OUTPUT_PATH_HOST"
+# Only remove if the directory actually exists
+if [ -d "$OUTPUT_PATH_HOST" ]; then
+    rm -rf "$OUTPUT_PATH_HOST"
+    success "Previous output directory removed."
+else
+    warn "Previous output directory not found. Nothing to remove."
+fi
+# Create the output directory for the new run
+mkdir -p "$OUTPUT_PATH_HOST"
 
 
-# ROW_FOLDERS=("${TARGET_DEPLOYMENTS[@]}")
-# COL_FOLDERS=("${TARGET_DEPLOYMENTS[@]}")
+ROW_FOLDERS=("${TARGET_DEPLOYMENTS[@]}")
+COL_FOLDERS=("${TARGET_DEPLOYMENTS[@]}")
 
-# for map_folder in "${ROW_FOLDERS[@]}"; do
-#     traj_row=$(generate_trajectory_folder "$map_folder")
-#     traj_row_path="${BASE_PATH_HOST}/${map_folder}/${traj_row}"
+for map_folder in "${ROW_FOLDERS[@]}"; do
+    traj_row=$(generate_trajectory_folder "$map_folder")
+    traj_row_path="${BASE_PATH_HOST}/${map_folder}/${traj_row}"
 
-#     # Check if input directories exist
-#     if [ ! -d "$traj_row_path" ]; then
-#         warn "Warning: Bag directory ${traj_row_path} does not exist, skipping..."
-#         continue
-#     fi
+    # Check if input directories exist
+    if [ ! -d "$traj_row_path" ]; then
+        warn "Warning: Bag directory ${traj_row_path} does not exist, skipping..."
+        continue
+    fi
 
-#     run_pipeline "$traj_row_path" "$traj_row" "$traj_row"
-#     sleep 2
+    run_pipeline "$traj_row_path" "$traj_row" "$traj_row"
+    sleep 2
 
-#     for loc_folder in "${COL_FOLDERS[@]}"; do
-#         # skip the diagonal as we already evaluated it
-#         if [ "$map_folder" == "$loc_folder" ]; then
-#             continue
-#         fi
+    for loc_folder in "${COL_FOLDERS[@]}"; do
+        # skip the diagonal as we already evaluated it
+        if [ "$map_folder" == "$loc_folder" ]; then
+            continue
+        fi
 
-#         traj_row=$(generate_trajectory_folder "$map_folder")
-#         traj_col=$(generate_trajectory_folder "$loc_folder")
+        traj_row=$(generate_trajectory_folder "$map_folder")
+        traj_col=$(generate_trajectory_folder "$loc_folder")
 
-#         traj_row_path="${BASE_PATH_HOST}/${map_folder}/${traj_row}"
-#         traj_col_path="${BASE_PATH_HOST}/${loc_folder}/${traj_col}"
+        traj_row_path="${BASE_PATH_HOST}/${map_folder}/${traj_row}"
+        traj_col_path="${BASE_PATH_HOST}/${loc_folder}/${traj_col}"
 
-#         # Check if input directories exist
-#         if [ ! -d "$traj_row_path" ]; then
-#             warn "Warning: Row directory $traj_row_path does not exist, skipping..."
-#             continue
-#         fi
+        # Check if input directories exist
+        if [ ! -d "$traj_row_path" ]; then
+            warn "Warning: Row directory $traj_row_path does not exist, skipping..."
+            continue
+        fi
 
-#         if [ ! -d "$traj_col_path" ]; then
-#             warn "Warning: Col directory $traj_col_path does not exist, skipping..."
-#             continue
-#         fi
+        if [ ! -d "$traj_col_path" ]; then
+            warn "Warning: Col directory $traj_col_path does not exist, skipping..."
+            continue
+        fi
 
-#         run_pipeline "$traj_row_path" "$traj_row" "$traj_col"
-#         sleep 2
-#     done
-# done
+        run_pipeline "$traj_row_path" "$traj_row" "$traj_col"
+        sleep 2
+    done
+done
 
 # 6. --- CONFUSION MATRIX ---
 # Construct the final confusion matrix
