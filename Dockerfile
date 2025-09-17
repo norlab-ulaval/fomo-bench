@@ -29,4 +29,4 @@ COPY src/ .
 RUN chmod +x entrypoints/*.sh
 
 # Set our new script as the default entrypoint for the image
-ENTRYPOINT ["/app/entrypoints/ros_entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoints/entrypoint_ros.sh"]

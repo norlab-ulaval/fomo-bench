@@ -5,8 +5,8 @@ set -e
 # Source ROS environment. roscore is guaranteed to be running by docker-compose.
 source /opt/ros/humble/setup.bash
 
-export BAG_PATH="/rosbag_files/$BAGFILE_NAME"
-echo "Looking for bag(s) at: $BAG_PATH ($BAGFILES_PATH_HOST/$BAGFILE_NAME on host)"
+export BAG_PATH="/rosbag_file"
+echo "Looking for bag(s) at: $BAG_PATH ($BAGFILES_PATH_HOST on host)"
 
 # This variable will hold the file path(s) for rosbag play
 BAG_FILES_TO_PLAY=""
@@ -35,14 +35,13 @@ else
 fi
 
 # Check if topics file exists
-if [ -f "/rosbag_files/$TOPICS_FILE" ]; then
-    echo "Using topics file: /rosbag_files/$TOPICS_FILE"
+if [ -f "/rosbag_file/$TOPICS_FILE" ]; then
+    echo "Using topics file: /rosbag_file/$TOPICS_FILE"
     # topics file is list of topics separated by a new line, we want to make it a list of topics
-    TOPICS=$(cat /rosbag_files/$TOPICS_FILE | tr '\n' ' ')
+    TOPICS=$(cat /rosbag_file/$TOPICS_FILE | tr '\n' ' ')
 
 else
     echo "No topics file found. Using default topics."
-    ls -lh /rosbag_files
 fi
 
 

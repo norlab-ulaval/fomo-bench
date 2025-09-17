@@ -46,13 +46,12 @@ services:
       # Network configuration for containerized environments
       ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
       # Service-specific variables
-      BAGFILES_PATH_HOST: ${BAGFILES_PATH_HOST}
-      BAGFILE_NAME: ${BAGFILE_NAME:-sensors}
+      BAGFILE_PATH_HOST: ${BAGFILE_PATH_HOST}
       ROSBAG_PLAY_RATE: ${ROSBAG_PLAY_RATE}
       TOPICS_FILE: ${TOPICS_FILE}
       ROS_HOME: /tmp/.ros
     volumes:
-      - ${BAGFILES_PATH_HOST}:/rosbag_files
+      - ${BAGFILE_PATH_HOST}:/rosbag_file
       # Optional: Share DDS configuration
       - /dev/shm:/dev/shm
     entrypoint: ["/app/entrypoints/entrypoint_play_bag.sh"]
@@ -133,14 +132,13 @@ services:
       ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
       # Service-specific variables
       ROS_HOME: /tmp/.ros
-      OUTPUT_FILE_NAME: ${OUTPUT_FILE_NAME}
-      OUTPUT_PATH_HOST: ${OUTPUT_PATH_HOST}
       # Service-specific variables
       # DISPLAY: ${DISPLAY}
     volumes:
       # - /tmp/.X11-unix:/tmp/.X11-unix
       - ${SLAM_CONFIG_OVERRIDE_FILE:-./config/slam/override_config.yaml.example}:/config/override.yaml
       - ${CALIB_PATH_HOST}:/calib
+      - ${PROCESSING_PATH_HOST}:/data
 
   # This service does not perform ROS communication, so it doesn't need network config.
   evaluate_trajectory:
@@ -159,6 +157,18 @@ services:
       - ${OUTPUT_PATH_HOST:-/evaluation_output}:/evaluation_output
     entrypoint: ["/app/entrypoints/entrypoint_evaluate.sh"]
 
+  # This service does not perform ROS communication, so it doesn't need network config.
+  plot_confusion_matrix:
+    init: true
+    image: fomo-bench:latest
+    container_name: plot_confusion_matrix
+    user: "1000:1000"
+    environment:
+      SLAM_NAME: ${SLAM_NAME:-}
+      DELTA: ${DELTA:-}
+    volumes:
+      - ${OUTPUT_PATH_HOST:-/evaluation_output}:/evaluation_output
+    entrypoint: ["/app/entrypoints/entrypoint_plot_confusion_matrix.sh"]
 # Define the custom bridge network for isolated ROS communication.
 networks:
   ros-net:

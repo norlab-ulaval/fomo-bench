@@ -1,0 +1,157 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import argparse
+import yaml
+import os
+
+def create_deployment_mapping():
+    deployment_mapping = {
+        "2024-11-21": "November21",
+        "2024-11-28": "November28",
+        "2025-01-10": "January10",
+        "2025-01-29": "January29",
+        "2025-03-10": "March",
+        "2025-04-16": "April",
+        "2025-05-28": "May",
+        "2025-06-26": "June",
+        "2025-08-20": "August",
+        "2025-09-24": "September",
+    }
+    return deployment_mapping
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Evaluate trajectories using APE and RPE metrics.")
+    parser.add_argument("--slam", required=True,
+                        help="Named of the SLAM used")
+    parser.add_argument("--path", default="/evaluation_output",
+                        help="Directory containing the results")
+    parser.add_argument("--delta", default="5",
+                        help="The delta value used for the RPE confusion matrix")
+    return parser.parse_args()
+
+def get_traj_names_from_file_name(file_name):
+    return file_name.split("_")[0:2]
+
+def construct_matrices(path: str, delta: float):
+    # get the number of yaml files in the directory
+    yaml_files = [f for f in os.listdir(path) if f.endswith(".yaml")]
+    yaml_files.sort()
+    number_of_deployments = int(np.ceil(np.sqrt(len(yaml_files))))
+
+    ape_matrix = np.zeros((number_of_deployments, number_of_deployments))
+    rpe_matrix = np.zeros((number_of_deployments, number_of_deployments))
+
+    ctr = 0
+    labels_maps = []
+    labels_locs = []
+    deployment_mapping = create_deployment_mapping()
+
+    for f in yaml_files:
+        map_traj, loc_traj = get_traj_names_from_file_name(f)
+        with open(os.path.join(path, f), "r") as file:
+            data = yaml.safe_load(file)
+            # Process data here
+            #
+            ape = data["results"]["ate_rmse_meters"]
+            rpe = data["rpe_details"][f"{delta}m"]["rmse_meters"]
+
+            map_idx = ctr // number_of_deployments
+            loc_idx = ctr % number_of_deployments
+            # Update the matrices
+            ape_matrix[map_idx, loc_idx] = ape
+            rpe_matrix[map_idx, loc_idx] = rpe
+
+            if map_idx == loc_idx:
+                for key in deployment_mapping.keys():
+                    if key in f:
+                        label_map = deployment_mapping[key]
+                        labels_maps.append(label_map)
+                        labels_locs.append(label_map)
+
+            ctr += 1
+    return ape_matrix, rpe_matrix, labels_maps, labels_locs
+
+def plot_confusion_matrix(matrix, labels_maps, labels_locs, title, ax, cmap="Reds"):
+    """
+    Plot confusion matrix with values and colors.
+    """
+    # Create a masked array to handle NaN values
+    masked_matrix = np.ma.masked_where(np.isnan(matrix), matrix)
+
+    # Create heatmap
+    im = ax.imshow(
+        masked_matrix,
+        cmap=cmap,
+        aspect="equal",
+        vmin=np.nanmin(matrix),
+        vmax=np.nanmax(matrix),
+    )
+
+    # Add colorbar
+    cbar = plt.colorbar(im, ax=ax, shrink=0.8)
+    cbar.set_label("Error Value [m]", rotation=90, labelpad=15)
+
+    # Set ticks and labels
+    ax.set_xticks(range(len(labels_locs)))
+    ax.set_yticks(range(len(labels_maps)))
+    ax.set_xticklabels(labels_locs)
+    ax.set_yticklabels(labels_maps)
+
+    # Add text annotations
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[1]):
+            if not np.isnan(matrix[i, j]):
+                # Choose text color based on background intensity
+                text_color = (
+                    "white"
+                    if masked_matrix[i, j] > (np.nanmax(matrix) * 0.6)
+                    else "black"
+                )
+                ax.text(
+                    j,
+                    i,
+                    f"{matrix[i, j]:.3f}",
+                    ha="center",
+                    va="center",
+                    color=text_color,
+                    fontweight="bold",
+                    fontsize=10,
+                )
+            else:
+                # Mark empty cells
+                ax.text(j, i, "N/A", ha="center", va="center", color="gray", fontsize=8)
+
+    # Labels and title
+    ax.set_xlabel("Localization Month", fontsize=12, fontweight="bold")
+    ax.set_ylabel("Mapping Month", fontsize=12, fontweight="bold")
+    ax.set_title(title, fontsize=14, fontweight="bold", pad=20)
+
+    # Add grid
+    ax.set_xticks(np.arange(-0.5, len(labels_locs), 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, len(labels_maps), 1), minor=True)
+    ax.grid(which="minor", color="white", linestyle="-", linewidth=2)
+
+if __name__ == "__main__":
+    args = parse_arguments()
+    base_path = args.path
+    # Create the plot
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+    ape_matrix, rpe_matrix, labels_maps, labels_locs = construct_matrices(base_path, args.delta)
+    # Plot ATE confusion matrix
+    plot_confusion_matrix(ape_matrix, labels_maps, labels_locs, "APE Confusion Matrix", ax1, cmap="Reds")
+
+    # Plot RTE confusion matrix
+    plot_confusion_matrix(rpe_matrix, labels_maps, labels_locs, "RPE Confusion Matrix", ax2, cmap="Blues")
+
+    plt.suptitle(f"Evaluation {args.slam}", fontsize=16, fontweight="bold")
+
+    # Adjust layout
+    plt.tight_layout()
+
+
+    # Optional: Save the plot
+    plt.savefig(
+        base_path + "/confusion_matrices.pdf", dpi=300, bbox_inches="tight"
+    )
+
+    print("Confusion matrices plotted successfully!")

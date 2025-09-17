@@ -325,8 +325,8 @@ if __name__ == '__main__':
     rpe_table, avg_relative_rpe = create_rpe_table(rpe_results)
     ate_rmse = compute_ate_rmse(rpe_results)
 
-    yaml_filename = os.path.join(args.output, "trajectory_analysis.yaml")
+    yaml_filename = os.path.join(args.output, f"{args.mapping_date}_{args.localization_date}_trajectory_analysis.yaml")
     export_results_to_yaml(yaml_filename, avg_relative_rpe, ate_rmse, rpe_results)
 
-    pdf_filename = os.path.join(args.output, "trajectory_analysis.pdf")
+    pdf_filename = os.path.join(args.output, f"{args.mapping_date}_{args.localization_date}_trajectory_analysis.pdf")
     create_figure(traj_pair[0], traj_pair[1], rpe_table, avg_relative_rpe, ate_rmse, pdf_filename, args.mapping_date, args.localization_date, args.slam)
