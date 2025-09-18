@@ -15,8 +15,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-RUN pip3 install numpy==1.21.0 pandas==1.3.0 matplotlib==3.4.2
-RUN pip3 install evo --upgrade
+RUN pip install numpy==1.24.4 scipy==1.10.1 matplotlib==3.4.2 evo
 
 # Set up a standard working directory
 WORKDIR /app
