@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+from numpy.ma.extras import unique
 import yaml
 import os
 
@@ -36,12 +37,24 @@ def construct_matrices(path: str, delta: float):
     # get the number of yaml files in the directory
     yaml_files = [f for f in os.listdir(path) if f.endswith(".yaml")]
     yaml_files.sort()
-    number_of_deployments = int(np.ceil(np.sqrt(len(yaml_files))))
+    unique_map_names = []
+    unique_loc_names = []
+    for f in yaml_files:
+        map_traj, loc_traj = get_traj_names_from_file_name(f)
+        unique_map_names.append(map_traj)
+        unique_loc_names.append(loc_traj)
+    unique_map_names = sorted(list(set(unique_map_names)))
+    unique_loc_names = sorted(list(set(unique_loc_names)))
 
-    ape_matrix = np.zeros((number_of_deployments, number_of_deployments))
-    rpe_matrix = np.zeros((number_of_deployments, number_of_deployments))
+    number_of_deployments_map = len(unique_map_names)
+    number_of_deployments_loc = len(unique_loc_names)
 
-    ctr = 0
+    ape_matrix = np.zeros((number_of_deployments_map, number_of_deployments_loc))
+    rpe_matrix = np.zeros((number_of_deployments_map, number_of_deployments_loc))
+
+    unique_map_name_index_map = {name: i for i, name in enumerate(unique_map_names)}
+    unique_loc_name_index_map = {name: i for i, name in enumerate(unique_loc_names)}
+
     labels_maps = []
     labels_locs = []
     deployment_mapping = create_deployment_mapping()
@@ -55,20 +68,26 @@ def construct_matrices(path: str, delta: float):
             ape = data["results"]["ate_rmse_meters"]
             rpe = data["rpe_details"][f"{delta}m"]["rmse_meters"]
 
-            map_idx = ctr // number_of_deployments
-            loc_idx = ctr % number_of_deployments
+            map_idx = unique_map_name_index_map[map_traj]
+            loc_idx = unique_loc_name_index_map[loc_traj]
             # Update the matrices
             ape_matrix[map_idx, loc_idx] = ape
             rpe_matrix[map_idx, loc_idx] = rpe
 
-            if map_idx == loc_idx:
+            if len(labels_maps) < number_of_deployments_map:
                 for key in deployment_mapping.keys():
                     if key in f:
-                        label_map = deployment_mapping[key]
-                        labels_maps.append(label_map)
-                        labels_locs.append(label_map)
+                        label = deployment_mapping[key]
+                        if label not in labels_maps:
+                            labels_maps.append(label)
 
-            ctr += 1
+            if len(labels_locs) < number_of_deployments_loc:
+                for key in deployment_mapping.keys():
+                    if key in f:
+                        label = deployment_mapping[key]
+                        if label not in labels_locs:
+                            labels_locs.append(label)
+
     return ape_matrix, rpe_matrix, labels_maps, labels_locs
 
 def plot_confusion_matrix(matrix, labels_maps, labels_locs, title, ax, cmap="Reds"):
@@ -153,5 +172,7 @@ if __name__ == "__main__":
     plt.savefig(
         base_path + "/confusion_matrices.pdf", dpi=300, bbox_inches="tight"
     )
+
+    plt.show()
 
     print("Confusion matrices plotted successfully!")
