@@ -209,7 +209,7 @@ for map_folder in "${ROW_FOLDERS[@]}"; do
             continue
         fi
 
-        run_pipeline "$traj_row_path" "$traj_row" "$traj_col"
+        run_pipeline "$traj_col_path" "$traj_row" "$traj_col"
         sleep 2
     done
 done
