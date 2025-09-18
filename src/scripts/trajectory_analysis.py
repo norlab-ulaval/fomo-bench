@@ -8,7 +8,9 @@ import matplotlib.pyplot as plt
 
 from evo.tools import file_interface
 from evo.core import sync, metrics
+import evo.core.geometry as geometry
 from evo.core.trajectory import PoseTrajectory3D
+from evo.core import lie_algebra as lie
 
 # =============================================================================
 # Configuration and Data Loading
@@ -29,6 +31,7 @@ def parse_arguments():
                         help="Directory to store output files")
     parser.add_argument("--test", action='store_true',
                         help="Use test mode with smaller RPE deltas")
+    parser.add_argument("--alignment", default='start', const='all', nargs='?', choices=['start', 'full'], help='The alignment method to use. Start uses the first 1000 points, full uses all points')
     return parser.parse_args()
 
 def load_trajectories(gt_file, est_file):
@@ -42,10 +45,20 @@ def load_trajectories(gt_file, est_file):
 def synchronize_trajectories(traj_ref, traj_est, max_diff=0.05):
     return sync.associate_trajectories(traj_ref, traj_est, max_diff)
 
-def align_trajectories(traj_ref_sync, traj_est_sync):
+def align_trajectories(traj_ref_sync, traj_est_sync, alignment):
     traj_ref_aligned = copy.deepcopy(traj_ref_sync)
     traj_est_aligned = copy.deepcopy(traj_est_sync)
-    traj_est_aligned.align(traj_ref_sync, correct_scale=False, correct_only_scale=False)
+
+    if alignment == "start":
+        n = 1000
+    elif alignment == "full":
+        n = -1
+    elif alignment == "single":
+        n = 1
+    else:
+        raise ValueError("Invalid alignment type")
+
+    traj_est_aligned.align(traj_ref_aligned, correct_scale=False, correct_only_scale=False, n=n)
     return traj_ref_aligned, traj_est_aligned
 
 def set_identity_orientations(traj):
@@ -58,7 +71,7 @@ def set_identity_orientations(traj):
         timestamps=traj.timestamps
     )
 
-def process_trajectories(gt_file, est_file):
+def process_trajectories(gt_file, est_file, alignment):
     if not os.path.exists(gt_file):
         print(f"File {gt_file} does not exist (gt_file)")
         exit(1)
@@ -74,9 +87,10 @@ def process_trajectories(gt_file, est_file):
         exit(1)
 
     traj_ref_sync, traj_est_sync = synchronize_trajectories(traj_ref, traj_est)
-    traj_ref_aligned, traj_est_aligned = align_trajectories(traj_ref_sync, traj_est_sync)
+    traj_ref_sync, traj_est_sync = synchronize_trajectories(traj_ref, traj_est)
+    traj_ref_aligned, traj_est_aligned = align_trajectories(traj_ref_sync, traj_est_sync, alignment)
 
-    traj_ref_final = set_identity_orientations(traj_ref_sync)
+    traj_ref_final = set_identity_orientations(traj_ref_aligned)
     traj_est_final = set_identity_orientations(traj_est_aligned)
 
     return traj_ref_final, traj_est_final
@@ -299,6 +313,8 @@ def create_figure(traj_ref, traj_est, rpe_table, avg_relative_rpe, ate_rmse, sav
 
     plt.tight_layout()
     plt.savefig(save_path, format="pdf", dpi=300)
+    plt.savefig(save_path, format="jpg", dpi=300)
+    # plt.show()
     plt.close()
 
 # =============================================================================
@@ -308,7 +324,7 @@ if __name__ == '__main__':
     args = parse_arguments()
     os.makedirs(args.output, exist_ok=True)
 
-    traj_pair = process_trajectories(args.gt, args.est)
+    traj_pair = process_trajectories(args.gt, args.est, args.alignment)
 
     ape_rmse, ape_stats = compute_ape(traj_pair)
 
