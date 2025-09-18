@@ -63,7 +63,7 @@ generate_trajectory_folder() {
     cd $BASE_PATH_HOST/${deployment_folder}
 
     # Find the trajectory folder that matches the pattern
-    local folder=$(ls -d $TARGET_TRAJECTORY-${deployment_folder}-* 2>/dev/null | head -n 1)
+    local folder=$(ls -d $TARGET_TRAJECTORY* 2>/dev/null | head -n 1)
     cd $current_folder
 
     if [[ -n "$folder" ]]; then
@@ -129,12 +129,12 @@ run_pipeline() {
     $DOCKER_COMPOSE_CMD up play_bag
     success "Bagfile playback complete."
 
-    if [ $IS_MAPPING -eq 1 ]; then
-        info "Saving map"
-        $DOCKER_COMPOSE_CMD up save_map
-        success "Map saved successfully."
-    fi
-    sleep 2
+    # if [ $IS_MAPPING -eq 1 ]; then
+    #     info "Saving map"
+    #     $DOCKER_COMPOSE_CMD up save_map
+    #     success "Map saved successfully."
+    # fi
+    # sleep 2
 
     # At this point, play_bag has finished, so we can stop the SLAM system.
     # The `trap` will handle the final `down` command, but we can be explicit here if needed.
