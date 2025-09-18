@@ -132,6 +132,7 @@ services:
       ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
       # Service-specific variables
       ROS_HOME: /tmp/.ros
+      IS_MAPPING: ${IS_MAPPING:-0}
       # Service-specific variables
       # DISPLAY: ${DISPLAY}
     volumes:
@@ -139,6 +140,33 @@ services:
       - ${SLAM_CONFIG_OVERRIDE_FILE:-./config/slam/override_config.yaml.example}:/config/override.yaml
       - ${CALIB_PATH_HOST}:/calib
       - ${PROCESSING_PATH_HOST}:/data
+
+  save_map:
+    image: ${SLAM_IMAGE}
+    container_name: save_map
+    hostname: save_map
+    networks:
+      - ros-net
+    environment:
+      # ROS2 Domain ID for network isolation
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+      # ROS2 Discovery configuration
+      ROS_DISCOVERY_SERVER: ${ROS_DISCOVERY_SERVER:-}
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+      # Network configuration for containerized environments
+      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
+      # Service-specific variables
+      ROS_HOME: /tmp/.ros
+    volumes:
+      - ${PROCESSING_PATH_HOST}:/data
+    command: |
+      /bin/bash -c "
+      source /opt/ros/humble/setup.bash &&
+      source /ros2_ws/install/setup.bash &&
+      ros2 service call /save_map norlab_icp_mapper_ros/srv/SaveMap \"
+        map_file_name:
+          data: \"/data/map.vtk\"
+      \""
 
   # This service does not perform ROS communication, so it doesn't need network config.
   evaluate_trajectory:
@@ -151,6 +179,7 @@ services:
       MAPPING_DATE: ${MAPPING_DATE:-}
       LOCALIZATION_DATE: ${LOCALIZATION_DATE:-}
       SLAM_NAME: ${SLAM_NAME:-}
+      MPLCONFIGDIR: /tmp/.matplotlib
     volumes:
       - ${REFERENCE_TRAJECTORY_FILE_HOST:-/reference_trajectory.txt}:/reference_trajectory.txt
       - ${ESTIMATED_TRAJECTORY_FILE_HOST:-/estimated_trajectory.txt}:/estimated_trajectory.txt
@@ -166,6 +195,7 @@ services:
     environment:
       SLAM_NAME: ${SLAM_NAME:-}
       DELTA: ${DELTA:-}
+      MPLCONFIGDIR: /tmp/.matplotlib
     volumes:
       - ${OUTPUT_PATH_HOST:-/evaluation_output}:/evaluation_output
     entrypoint: ["/app/entrypoints/entrypoint_plot_confusion_matrix.sh"]

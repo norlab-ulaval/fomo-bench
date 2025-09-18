@@ -93,6 +93,11 @@ run_pipeline() {
     info "Odometry recording saves data to $OUTPUT_FILE_NAME"
     info "Estimated trajectory is stored in $ESTIMATED_TRAJECTORY_FILE_HOST on host"
 
+    if [[ $MAPPING_DATE == $LOCALIZATION_DATE ]]; then
+        export IS_MAPPING=1
+    else
+        export IS_MAPPING=0
+    fi
 
     # --- Pipeline Cleanup ---
     info "Performing cleanup..."
@@ -124,6 +129,13 @@ run_pipeline() {
     $DOCKER_COMPOSE_CMD up play_bag
     success "Bagfile playback complete."
 
+    if [ $IS_MAPPING -eq 1 ]; then
+        info "Saving map"
+        $DOCKER_COMPOSE_CMD up save_map
+        success "Map saved successfully."
+    fi
+    sleep 2
+
     # At this point, play_bag has finished, so we can stop the SLAM system.
     # The `trap` will handle the final `down` command, but we can be explicit here if needed.
     # For simplicity, we let the trap handle the final cleanup.
@@ -132,18 +144,6 @@ run_pipeline() {
     info "Running trajectory evaluation..."
     $DOCKER_COMPOSE_CMD up evaluate_trajectory
     success "Evaluation complete."
-
-    # 5. --- Final Report ---
-    # Construct the report path safely from OUTPUT_PATH_HOST
-    REPORT_PATH="$OUTPUT_PATH_HOST/${2}_${3}.pdf"
-    info "Attempting to open evaluation report..."
-    if [ -f "$REPORT_PATH" ]; then
-        # Try to open the report in a cross-platform way
-        xdg-open "$REPORT_PATH" 2>/dev/null || open "$REPORT_PATH" 2>/dev/null || warn "Could not open report automatically."
-        success "Report is available at: $REPORT_PATH"
-    else
-        error "Evaluation report not found at: $REPORT_PATH"
-    fi
 }
 
 # Determine which docker-compose files to use
@@ -170,8 +170,8 @@ fi
 mkdir -p "$OUTPUT_PATH_HOST"
 
 
-ROW_FOLDERS=("${TARGET_DEPLOYMENTS[@]}")
-COL_FOLDERS=("${TARGET_DEPLOYMENTS[@]}")
+ROW_FOLDERS=("2024-11-21")
+COL_FOLDERS=("2024-11-21" "2025-01-29" "2025-03-10" "2025-06-26")
 
 for map_folder in "${ROW_FOLDERS[@]}"; do
     traj_row=$(generate_trajectory_folder "$map_folder")
