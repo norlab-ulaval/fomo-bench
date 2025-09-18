@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
-from numpy.ma.extras import unique
 import yaml
 import os
 
@@ -31,7 +30,7 @@ def parse_arguments():
     return parser.parse_args()
 
 def get_traj_names_from_file_name(file_name):
-    return file_name.split("_")[0:2]
+    return file_name.split("_")[1], file_name.split("_")[3]
 
 def construct_matrices(path: str, delta: float):
     # get the number of yaml files in the directory
