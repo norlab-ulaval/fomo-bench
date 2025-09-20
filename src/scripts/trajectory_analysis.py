@@ -203,14 +203,13 @@ def plot_trajectory_timestamp(ax, traj_ref, traj_est, coord: str):
         index = 1
     elif coord.lower() == "z":
         index = 2
-    ax.plot(traj_ref.timestamps, traj_ref.positions_xyz[:, index],
-            label="Reference", linestyle='-', marker='o', markersize=2)
-    ax.plot(traj_est.timestamps, traj_est.positions_xyz[:, index],
-            label="Estimated", linestyle='-', marker='x', markersize=2)
+    error = np.abs(traj_ref.positions_xyz[:, index] - traj_est.positions_xyz[:, index])
+    time = traj_ref.timestamps - traj_ref.timestamps[0]
+    ax.plot(time, error,
+            label=f"Error ({coord.capitalize()})", linestyle='-', marker='o', markersize=2)
     ax.set_xlabel("Time (s)")
-    ax.set_ylabel(f"{coord.capitalize()} Position (m)")
-    ax.set_title(f"{coord.capitalize()} Trajectory Plot")
-    ax.legend()
+    ax.set_ylabel(f"{coord.capitalize()} Error (m)")
+    ax.set_title(f"{coord.capitalize()} Trajectory Error Plot")
     ax.grid()
     ax.set_aspect('equal', adjustable='datalim')
 
@@ -344,5 +343,5 @@ if __name__ == '__main__':
     yaml_filename = os.path.join(args.output, f"{args.mapping_date}_{args.localization_date}_trajectory_analysis.yaml")
     export_results_to_yaml(yaml_filename, avg_relative_rpe, ate_rmse, rpe_results)
 
-    pdf_filename = os.path.join(args.output, f"{args.mapping_date}_{args.localization_date}_trajectory_analysis.pdf")
-    create_figure(traj_pair[0], traj_pair[1], rpe_table, avg_relative_rpe, ate_rmse, pdf_filename, args.mapping_date, args.localization_date, args.slam)
+    analysis_filename = os.path.join(args.output, f"{args.mapping_date}_{args.localization_date}_trajectory_analysis")
+    create_figure(traj_pair[0], traj_pair[1], rpe_table, avg_relative_rpe, ate_rmse, analysis_filename, args.mapping_date, args.localization_date, args.slam)
