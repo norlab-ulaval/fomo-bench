@@ -45,7 +45,7 @@ else
 fi
 
 
-ROSBAG_PLAY_COMMAND="ros2 bag play ${BAG_FILES_TO_PLAY} --clock --log-level error -r${ROSBAG_PLAY_RATE} --read-ahead-queue-size 10000 -s mcap"
+ROSBAG_PLAY_COMMAND="ros2 bag play ${BAG_FILES_TO_PLAY} --clock -r${ROSBAG_PLAY_RATE} --read-ahead-queue-size 10000 -s mcap"
 # if TOPICS is not empty, play only the topics in TOPICS
 if [ -n "$TOPICS" ]; then
     echo "Playing only the topics in TOPICS..."
