@@ -133,6 +133,7 @@ services:
       # Service-specific variables
       ROS_HOME: /tmp/.ros
       IS_MAPPING: ${IS_MAPPING:-0}
+      STORAGE_PATH: /data
       # Service-specific variables
       # DISPLAY: ${DISPLAY}
     volumes:

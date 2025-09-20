@@ -86,6 +86,8 @@ run_pipeline() {
     export MAPPING_DATE=$2
     export LOCALIZATION_DATE=$3
 
+    export PROCESSING_PATH_HOST="/tmp/data/${MAPPING_DATE}"
+
     info "Starting SLAM services in the background..."
     info "Bagfile path: $BAGFILE_PATH_HOST"
     info "Calibration path: $CALIB_PATH_HOST"
@@ -129,11 +131,6 @@ run_pipeline() {
     $DOCKER_COMPOSE_CMD up play_bag
     success "Bagfile playback complete."
 
-    if [ $IS_MAPPING -eq 1 ]; then
-        info "Saving map"
-        $DOCKER_COMPOSE_CMD up save_map
-        success "Map saved successfully."
-    fi
     sleep 2
 
     # At this point, play_bag has finished, so we can stop the SLAM system.
