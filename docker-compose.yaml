@@ -8,7 +8,7 @@ services:
     hostname: record_odometry
     networks:
       - ros-net
-    user: "1000:1000"
+    user: "${UID:-1000}:${GID:-1000}"
     environment:
       # ROS2 Domain ID for network isolation
       ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
@@ -36,7 +36,7 @@ services:
     hostname: play_bag
     networks:
       - ros-net
-    user: "1000:1000"
+    user: "${UID:-1000}:${GID:-1000}"
     environment:
       # ROS2 Domain ID for network isolation
       ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
@@ -65,7 +65,7 @@ services:
     hostname: run_foxglove
     networks:
       - ros-net
-    user: "1000:1000"
+    user: "${UID:-1000}:${GID:-1000}"
     ports:
       - "8772:8772"
     environment:
@@ -147,7 +147,7 @@ services:
     init: true
     image: fomo-bench:latest
     container_name: evaluate_trajectory
-    user: "1000:1000"
+    user: "${UID:-1000}:${GID:-1000}"
     environment:
       TEST_MODE: ${TEST_MODE}
       MAPPING_DATE: ${MAPPING_DATE:-}
@@ -165,7 +165,7 @@ services:
     init: true
     image: fomo-bench:latest
     container_name: plot_confusion_matrix
-    user: "1000:1000"
+    user: "${UID:-1000}:${GID:-1000}"
     environment:
       SLAM_NAME: ${SLAM_NAME:-}
       DELTA: ${DELTA:-}
