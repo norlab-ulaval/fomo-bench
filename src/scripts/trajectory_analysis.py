@@ -311,8 +311,8 @@ def create_figure(traj_ref, traj_est, rpe_table, avg_relative_rpe, ate_rmse, sav
     # plot_trajectory_3d(ax_3d, traj_ref, traj_est)
 
     plt.tight_layout()
-    plt.savefig(save_path, format="pdf", dpi=300)
-    plt.savefig(save_path, format="jpg", dpi=300)
+    plt.savefig(f"{save_path}.pdf", format="pdf", dpi=300)
+    plt.savefig(f"{save_path}.jpg", format="jpg", dpi=300)
     # plt.show()
     plt.close()
 
