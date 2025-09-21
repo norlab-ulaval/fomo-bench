@@ -4,6 +4,8 @@ from rclpy.node import Node
 import csv
 import os
 from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped, Pose
+from std_msgs.msg import Header
 
 # --- Configuration ---
 # The directory where the trajectory file will be saved.
@@ -41,6 +43,8 @@ class OdometryLogger(Node):
             # If we can't create the file/dir, there's no point in continuing.
             raise e
 
+        self.active_function = None
+
         # --- Subscribe to Topic ---
         # Subscribe to the /estimated_odom topic.
         # The 'odometry_callback' function will be executed for each message.
@@ -50,31 +54,46 @@ class OdometryLogger(Node):
             self.odometry_callback,
             10  # QoS history depth
         )
+        # --- Subscribe to Topic ---
+        # Subscribe to the /estimated_pose topic.
+        # The 'pose_callback' function will be executed for each message.
+        self.subscription = self.create_subscription(
+            PoseWithCovarianceStamped,
+            '/estimated_pose_with_covariance',
+            self.pose_with_covariance_callback,
+            10  # QoS history depth
+        )
+        self.subscription = self.create_subscription(
+            PoseStamped,
+            '/estimated_pose',
+            self.pose_callback,
+            10  # QoS history depth
+        )
 
-        self.get_logger().info("Odometry logger started. Listening to /estimated_odom...")
+        self.get_logger().info("Odometry logger started. Listening to /estimated_odom and /estimated_pose...")
 
         # Create throttled loggers for periodic messages
         self._last_log_time = self.get_clock().now()
         self._last_error_time = self.get_clock().now()
 
-    def odometry_callback(self, msg):
+    def write_pose(self, pose: Pose, header: Header):
         """
-        Callback function to log odometry data in the TUM format.
-        This function is called every time a new message is received on the /estimated_odom topic.
+        Function to log pose data in the TUM format.
+        This function is called every time a new message is received on the /estimated_odom or /estimated_pose_stamped topic.
         """
         # Extract position
-        x = msg.pose.pose.position.x
-        y = msg.pose.pose.position.y
-        z = msg.pose.pose.position.z
+        x = pose.position.x
+        y = pose.position.y
+        z = pose.position.z
 
         # Extract orientation (in TUM format order: qx, qy, qz, qw)
-        qx = msg.pose.pose.orientation.x
-        qy = msg.pose.pose.orientation.y
-        qz = msg.pose.pose.orientation.z
-        qw = msg.pose.pose.orientation.w
+        qx = pose.orientation.x
+        qy = pose.orientation.y
+        qz = pose.orientation.z
+        qw = pose.orientation.w
 
         # Extract timestamp (convert from nanoseconds to seconds)
-        timestamp = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+        timestamp = header.stamp.sec + header.stamp.nanosec * 1e-9
 
         # Append the pose to the file
         try:
@@ -95,6 +114,40 @@ class OdometryLogger(Node):
         if (current_time - self._last_log_time).nanoseconds / 1e9 >= 10.0:
             self.get_logger().info(f"Logged odometry data to {CSV_FILE}")
             self._last_log_time = current_time
+
+    def odometry_callback(self, msg: Odometry):
+        """
+        This function is called every time a new message is received on the /estimated_odom topic.
+        """
+        if self.active_function is None:
+            self.active_function = self.odometry_callback
+        elif self.active_function != self.odometry_callback:
+            self.get_logger().warn(f"Already logging data using {self.active_function.__qualname__} callback. Skipping.")
+            return
+        self.write_pose(msg.pose.pose, msg.header)
+
+    def pose_callback(self, msg: PoseStamped):
+        """
+        This function is called every time a new message is received on the /estimated_pose topic.
+        """
+        if self.active_function is None:
+            self.active_function = self.pose_callback
+        elif self.active_function != self.pose_callback:
+            self.get_logger().warn(f"Already logging data using {self.active_function.__qualname__} callback. Skipping.")
+            return
+        self.write_pose(msg.pose, msg.header)
+
+
+    def pose_with_covariance_callback(self, msg: PoseWithCovarianceStamped):
+        """
+        This function is called every time a new message is received on the /estimated_pose_with_covariance topic.
+        """
+        if self.active_function is None:
+            self.active_function = self.pose_with_covariance_callback
+        elif self.active_function != self.pose_with_covariance_callback:
+            self.get_logger().warn(f"Already logging data using {self.active_function.__qualname__} callback. Skipping.")
+            return
+        self.write_pose(msg.pose.pose, msg.header)
 
 def main():
     """
