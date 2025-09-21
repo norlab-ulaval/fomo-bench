@@ -1,4 +1,4 @@
-ARG from=arm64v8/ros:humble
+ARG from=ros:humble-ros-base
 FROM ${from}
 
 SHELL ["/bin/bash", "-c"]
@@ -58,10 +58,10 @@ WORKDIR /
 RUN mkdir -p /ros2_ws/src
 
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
-RUN git clone https://github.com/norlab-ulaval/imu_tools.git -b fomo /ros2_ws/src/packages/imu_tools
-RUN git clone https://github.com/norlab-ulaval/norlab_imu_tools.git -b fomo /ros2_ws/src/packages/norlab_imu_tools
-RUN git clone https://github.com/norlab-ulaval/libpointmatcher_ros.git -b fomo /ros2_ws/src/packages/libpointmatcher_ros
-RUN git clone https://github.com/norlab-ulaval/norlab_icp_mapper_ros.git -b fomo /ros2_ws/src/packages/norlab_icp_mapper_ros
+RUN git clone https://github.com/norlab-ulaval/imu_tools.git -b fomo /ros2_ws/src/imu_tools
+RUN git clone https://github.com/norlab-ulaval/norlab_imu_tools.git -b fomo /ros2_ws/src/norlab_imu_tools
+RUN git clone https://github.com/norlab-ulaval/libpointmatcher_ros.git -b fomo /ros2_ws/src/libpointmatcher_ros
+RUN git clone https://github.com/norlab-ulaval/norlab_icp_mapper_ros.git -b fomo /ros2_ws/src/norlab_icp_mapper_ros
 
 RUN rosdep update
 RUN rosdep install --from-paths /ros2_ws/src --ignore-src -r -y
