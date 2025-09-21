@@ -133,11 +133,10 @@ run_pipeline() {
 
     sleep 2
 
-    # At this point, play_bag has finished, so we can stop the SLAM system.
-    # The `trap` will handle the final `down` command, but we can be explicit here if needed.
-    # For simplicity, we let the trap handle the final cleanup.
+    # Save run_slam logs into a file for debugging
+    docker logs run_slam > "${PROCESSING_PATH_HOST}/run_slam_${LOCALIZATION_DATE}.log"
 
-    # 4. --- Run Evaluation Stage ---
+    # --- Run Evaluation Stage ---
     info "Running trajectory evaluation..."
     $DOCKER_COMPOSE_CMD up evaluate_trajectory
     success "Evaluation complete."
