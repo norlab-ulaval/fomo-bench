@@ -50,7 +50,7 @@ def align_trajectories(traj_ref_sync, traj_est_sync, alignment):
     traj_est_aligned = copy.deepcopy(traj_est_sync)
 
     if alignment == "start":
-        n = 1000
+        n = 100
     elif alignment == "full":
         n = -1
     elif alignment == "single":
