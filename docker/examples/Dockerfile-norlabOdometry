@@ -44,4 +44,4 @@ RUN cd /ros2_ws/ \
 STOPSIGNAL SIGINT
 
 # add additional commands here
-CMD ["/bin/bash", "-c", "source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && ros2 launch --noninteractive norlab_imu_tools simple-mapper.launch.py"]
+CMD ["/bin/bash", "-c", "source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && ros2 launch --noninteractive norlab_imu_tools odometry-only.launch.py"]
