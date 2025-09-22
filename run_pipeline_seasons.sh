@@ -166,9 +166,9 @@ fi
 # Create the output directory for the new run
 mkdir -p "$OUTPUT_PATH_HOST"
 
-
-ROW_FOLDERS=("2024-11-21")
-COL_FOLDERS=("2024-11-21" "2025-01-29" "2025-03-10" "2025-06-26")
+# assign TARGET_DEPLOYMENTS to rows and cols
+ROW_FOLDERS=("${TARGET_DEPLOYMENTS[@]}")
+COL_FOLDERS=("${TARGET_DEPLOYMENTS[@]}")
 
 for map_folder in "${ROW_FOLDERS[@]}"; do
     traj_row=$(generate_trajectory_folder "$map_folder")

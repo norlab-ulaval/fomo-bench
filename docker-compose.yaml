@@ -52,6 +52,7 @@ services:
       ROS_HOME: /tmp/.ros
     volumes:
       - ${BAGFILE_PATH_HOST}:/rosbag_file
+      - ${TOPICS_FILE}:/tmp/topics.txt
       # Optional: Share DDS configuration
       - /dev/shm:/dev/shm
     entrypoint: ["/app/entrypoints/entrypoint_play_bag.sh"]
@@ -136,8 +137,7 @@ services:
       STORAGE_PATH: /data
       # Service-specific variables
       # DISPLAY: ${DISPLAY}
-    working_dir:
-      /data
+    working_dir: /data
     volumes:
       # - /tmp/.X11-unix:/tmp/.X11-unix
       - ${SLAM_CONFIG_OVERRIDE_FILE:-./config/slam/override_config.yaml.example}:/config/override.yaml

@@ -35,21 +35,23 @@ else
 fi
 
 # Check if topics file exists
-if [ -f "/rosbag_file/$TOPICS_FILE" ]; then
-    echo "Using topics file: /rosbag_file/$TOPICS_FILE"
+if [ -f "/tmp/topics.txt" ]; then
+    echo "Using topics file: /tmp/topics.txt"
     # topics file is list of topics separated by a new line, we want to make it a list of topics
-    TOPICS=$(cat /rosbag_file/$TOPICS_FILE | tr '\n' ' ')
+    TOPICS=$(cat /tmp/topics.txt | tr '\n' ' ')
 
 else
-    echo "No topics file found. Using default topics."
+    echo "No topics file found. Using only basic topics."
 fi
+# Append basic topics to the list of topics
+TOPICS=("${TOPICS[@]}" "/tf_static" "/vectornav/data_raw" "/xsens/data_raw" "/warthog/platform/odom")
 
 
 ROSBAG_PLAY_COMMAND="ros2 bag play ${BAG_FILES_TO_PLAY} --clock -r${ROSBAG_PLAY_RATE} --read-ahead-queue-size 10000 -s mcap"
 # if TOPICS is not empty, play only the topics in TOPICS
 if [ -n "$TOPICS" ]; then
     echo "Playing only the topics in TOPICS..."
-    ROSBAG_PLAY_COMMAND="$ROSBAG_PLAY_COMMAND --topics ${TOPICS}"
+    ROSBAG_PLAY_COMMAND="$ROSBAG_PLAY_COMMAND --topics ${TOPICS[@]}"
 fi
 
 echo "Playing the bagfile..."
