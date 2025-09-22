@@ -87,6 +87,7 @@ run_pipeline() {
     export LOCALIZATION_DATE=$3
 
     export PROCESSING_PATH_HOST="/tmp/data/${MAPPING_DATE}"
+    mkdir -p $PROCESSING_PATH_HOST
 
     info "Starting SLAM services in the background..."
     info "Bagfile path: $BAGFILE_PATH_HOST"
@@ -122,7 +123,7 @@ run_pipeline() {
         # Show the last 20 lines of the log to help the user.
         $DOCKER_COMPOSE_CMD logs --tail=20 run_slam
         # The script will exit here, and the 'trap' will run the cleanup function.
-        exit 1
+        return
     else
         success "'run_slam' service started successfully."
     fi
