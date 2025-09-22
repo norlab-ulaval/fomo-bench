@@ -137,6 +137,20 @@ run_pipeline() {
     # Save run_slam logs into a file for debugging
     docker logs run_slam > "${PROCESSING_PATH_HOST}/run_slam_${LOCALIZATION_DATE}.log"
 
+    # --- Pipeline Cleanup ---
+    info "Performing cleanup..."
+    # Stop any containers from a previous run
+    $DOCKER_COMPOSE_CMD down -v --remove-orphans
+
+    # Check if the method generated a trajectory file
+    # This might be the case with SLAM methods that do loop closure
+    # In that case, the recorded trajectory would be wrong.
+    if [ -f "${PROCESSING_PATH_HOST}/trajectory.txt" ]; then
+        info "Method generated a final trajectory file, replacing existing one..."
+        mv $ESTIMATED_TRAJECTORY_FILE_HOST "${ESTIMATED_TRAJECTORY_FILE_HOST}_bak"
+        mv "${PROCESSING_PATH_HOST}/trajectory.txt" "${ESTIMATED_TRAJECTORY_FILE_HOST}"
+    fi
+
     # --- Run Evaluation Stage ---
     info "Running trajectory evaluation..."
     $DOCKER_COMPOSE_CMD up evaluate_trajectory
@@ -157,14 +171,14 @@ if [ -z "$OUTPUT_PATH_HOST" ]; then
 fi
 info "Checking for an old output directory in: $OUTPUT_PATH_HOST"
 # Only remove if the directory actually exists
-if [ -d "$OUTPUT_PATH_HOST" ]; then
-    rm -rf "$OUTPUT_PATH_HOST"
-    success "Previous output directory removed."
-else
-    warn "Previous output directory not found. Nothing to remove."
-fi
-# Create the output directory for the new run
-mkdir -p "$OUTPUT_PATH_HOST"
+# if [ -d "$OUTPUT_PATH_HOST" ]; then
+#     rm -rf "$OUTPUT_PATH_HOST"
+#     success "Previous output directory removed."
+# else
+#     warn "Previous output directory not found. Nothing to remove."
+# fi
+# # Create the output directory for the new run
+# mkdir -p "$OUTPUT_PATH_HOST"
 
 # assign TARGET_DEPLOYMENTS to rows and cols
 ROW_FOLDERS=("${TARGET_DEPLOYMENTS[@]}")
@@ -182,6 +196,7 @@ for map_folder in "${ROW_FOLDERS[@]}"; do
 
     run_pipeline "$traj_row_path" "$traj_row" "$traj_row"
     sleep 2
+    continue
 
     for loc_folder in "${COL_FOLDERS[@]}"; do
         # skip the diagonal as we already evaluated it
