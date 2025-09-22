@@ -5,6 +5,9 @@ import yaml
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+import math
+from scipy.spatial.transform import Rotation
+import pandas as pd
 
 from evo.tools import file_interface
 from evo.core import sync, metrics
@@ -31,7 +34,7 @@ def parse_arguments():
                         help="Directory to store output files")
     parser.add_argument("--test", action='store_true',
                         help="Use test mode with smaller RPE deltas")
-    parser.add_argument("--alignment", default='start', const='all', nargs='?', choices=['start', 'full'], help='The alignment method to use. Start uses the first 1000 points, full uses all points')
+    parser.add_argument("--alignment", default='start', const='all', nargs='?', choices=['start', 'full', 'custom'], help='The alignment method to use. Start uses the first 1000 points, full uses all points')
     return parser.parse_args()
 
 def load_trajectories(gt_file, est_file):
@@ -45,7 +48,96 @@ def load_trajectories(gt_file, est_file):
 def synchronize_trajectories(traj_ref, traj_est, max_diff=0.05):
     return sync.associate_trajectories(traj_ref, traj_est, max_diff)
 
+def accel_to_roll_pitch(ax, ay, az):
+    roll  = math.atan2(ay, az)
+    pitch = math.atan2(-ax, math.sqrt(ay*ay + az*az))
+    return math.pi - roll, pitch
+
+def approx_yaw_first_seconds(traj, odo_csv, threshold=10.0, deg=True):
+    pts = np.array(traj.positions_xyz)
+    timestamps = np.array(traj.timestamps)
+
+    df = pd.read_csv(odo_csv, sep=',')
+    odo_time = df['t'].to_numpy()
+    odo_pts = df[['px']].to_numpy()
+    odo_disp = odo_pts[1:] - odo_pts[0]
+    odo_dist = np.linalg.norm(odo_disp, axis=1)
+    first_idx = np.searchsorted(odo_dist, 0, side='right')  # first meter
+    print(first_idx)
+    print(odo_pts[first_idx + 1])
+    timestamp = odo_time[first_idx + 1]
+
+    idx = np.searchsorted(timestamps, timestamp / 10e5 + threshold, side='left')
+
+    xy = pts[:, :2]
+    dx, dy = (xy[idx] - xy[0])
+    yaw = math.atan2(dy, dx)
+    return math.degrees(yaw) if deg else yaw
+
+
+def align_trajectories_with_imu(traj_ref_sync, traj_est_sync, imu_data, odo_csv):
+    traj_ref_aligned = copy.deepcopy(traj_ref_sync)
+    traj_est_aligned = copy.deepcopy(traj_est_sync)
+
+    print(traj_ref_aligned)
+    
+    # Get positions as numpy arrays
+    ref_positions = np.array(traj_ref_aligned.positions_xyz)
+    est_positions = np.array(traj_est_aligned.positions_xyz)
+    
+    if len(ref_positions) == 0 or len(est_positions) == 0:
+        raise ValueError("Trajectories cannot be empty")
+    
+    # Step 1: Align first points (translation only)
+    translation = ref_positions[0] - est_positions[0]
+    est_positions_translated = est_positions + translation
+
+    roll, pitch = accel_to_roll_pitch(imu_data['ax'], imu_data['ay'], imu_data['az'])
+    yaw = approx_yaw_first_seconds(traj_ref_aligned, threshold=0.5, deg=False, odo_csv=odo_csv)
+    r = Rotation.from_euler("xyz", [roll, pitch, yaw])
+    R = r.as_matrix()
+
+    print(f"IMU-derived angles (deg): roll={math.degrees(roll):.2f}, pitch={math.degrees(pitch):.2f}, yaw={math.degrees(yaw):.2f}")
+
+    # Step 3: Apply rotation around the first point
+    est_positions_final = np.zeros_like(est_positions_translated)
+    est_positions_final[0] = est_positions_translated[0]  # Keep first point fixed
+    
+    # Rotate remaining points around the first point
+    for i in range(1, len(est_positions_translated)):
+        centered_point = est_positions_translated[i] - est_positions_translated[0]
+        rotated_point = R @ centered_point
+        est_positions_final[i] = rotated_point + est_positions_translated[0]
+    
+    # Step 4: Update the trajectory poses in evo format
+    for i in range(len(traj_est_aligned.poses_se3)):
+        # Get the current pose matrix
+        current_pose = traj_est_aligned.poses_se3[i].copy()
+        
+        # Update translation
+        current_pose[:3, 3] = est_positions_final[i]
+        
+        # Update rotation part
+        if i > 0:  # Don't rotate the first pose's orientation, only translate it
+            # Apply the IMU-derived rotation to the existing rotation
+            original_rotation = traj_est_aligned.poses_se3[i][:3, :3]
+            new_rotation = R @ original_rotation
+            current_pose[:3, :3] = new_rotation
+        
+        # Update the pose in the trajectory
+        traj_est_aligned.poses_se3[i] = current_pose
+    
+    # Update the internal positions cache if it exists
+    if hasattr(traj_est_aligned, '_positions_xyz'):
+        traj_est_aligned._positions_xyz = est_positions_final
+    
+    return traj_ref_aligned, traj_est_aligned
+
 def align_trajectories(traj_ref_sync, traj_est_sync, alignment):
+    imu_data = {'ax':0.00300174998119473, 'ay':0.00699117686599493, 'az':-0.0270397216081619}
+    #imu_data = {'ax': 0.00435515958815813, 'ay': 0.0021539437584579, 'az': -0.0159614309668541}
+    if alignment == "custom":
+        return align_trajectories_with_imu(traj_ref_sync, traj_est_sync, imu_data, "/mnt/synology-nas/ijrr/2024-11-21/yellow_2024-11-21-14-26/odom.csv")
     traj_ref_aligned = copy.deepcopy(traj_ref_sync)
     traj_est_aligned = copy.deepcopy(traj_est_sync)
 
@@ -59,6 +151,7 @@ def align_trajectories(traj_ref_sync, traj_est_sync, alignment):
         raise ValueError("Invalid alignment type")
 
     traj_est_aligned.align(traj_ref_aligned, correct_scale=False, correct_only_scale=False, n=n)
+
     return traj_ref_aligned, traj_est_aligned
 
 def set_identity_orientations(traj):
