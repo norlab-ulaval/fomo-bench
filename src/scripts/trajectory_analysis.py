@@ -221,6 +221,8 @@ def plot_trajectory_xy(ax, traj_ref, traj_est):
             label="Reference", linestyle='-', marker='o', markersize=2)
     ax.plot(traj_est.positions_xyz[:, 0], traj_est.positions_xyz[:, 1],
             label="Estimated", linestyle='-', marker='x', markersize=2)
+    ax.scatter(traj_ref.positions_xyz[0, 0], traj_ref.positions_xyz[0, 1], label="Start", color='red', marker='o', s=50)
+    ax.scatter(traj_ref.positions_xyz[-1, 0], traj_ref.positions_xyz[-1, 1], label="End", color='blue', marker='x', s=50)
     ax.set_xlabel("X Position (m)")
     ax.set_ylabel("Y Position (m)")
     ax.set_title("XY Trajectory Plot")
