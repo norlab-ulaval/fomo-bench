@@ -4,6 +4,7 @@ import argparse
 import yaml
 import os
 
+
 def create_deployment_mapping():
     deployment_mapping = {
         "2024-11-21": "November21",
@@ -21,18 +22,24 @@ def create_deployment_mapping():
     }
     return deployment_mapping
 
+
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Evaluate trajectories using APE and RPE metrics.")
-    parser.add_argument("--slam", required=True,
-                        help="Named of the SLAM used")
-    parser.add_argument("--path", default="/evaluation_output",
-                        help="Directory containing the results")
-    parser.add_argument("--delta", default="5",
-                        help="The delta value used for the RPE confusion matrix")
+    parser = argparse.ArgumentParser(
+        description="Evaluate trajectories using APE and RPE metrics."
+    )
+    parser.add_argument("--slam", required=True, help="Named of the SLAM used")
+    parser.add_argument(
+        "--path", default="/evaluation_output", help="Directory containing the results"
+    )
+    parser.add_argument(
+        "--delta", default="5", help="The delta value used for the RPE confusion matrix"
+    )
     return parser.parse_args()
+
 
 def get_traj_names_from_file_name(file_name):
     return file_name.split("_")[1], file_name.split("_")[3]
+
 
 def construct_matrices(path: str, delta: float):
     # get the number of yaml files in the directory
@@ -90,6 +97,7 @@ def construct_matrices(path: str, delta: float):
                             labels_locs.append(label)
 
     return ape_matrix, rpe_matrix, labels_maps, labels_locs
+
 
 def plot_confusion_matrix(matrix, labels_maps, labels_locs, title, ax, cmap="Reds"):
     """
@@ -151,31 +159,33 @@ def plot_confusion_matrix(matrix, labels_maps, labels_locs, title, ax, cmap="Red
     ax.set_yticks(np.arange(-0.5, len(labels_maps), 1), minor=True)
     ax.grid(which="minor", color="white", linestyle="-", linewidth=2)
 
+
 if __name__ == "__main__":
     args = parse_arguments()
     base_path = args.path
     # Create the plot
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-    ape_matrix, rpe_matrix, labels_maps, labels_locs = construct_matrices(base_path, args.delta)
+    ape_matrix, rpe_matrix, labels_maps, labels_locs = construct_matrices(
+        base_path, args.delta
+    )
     # Plot ATE confusion matrix
-    plot_confusion_matrix(ape_matrix, labels_maps, labels_locs, "APE Confusion Matrix", ax1, cmap="Reds")
+    plot_confusion_matrix(
+        ape_matrix, labels_maps, labels_locs, "APE Confusion Matrix", ax1, cmap="Reds"
+    )
 
     # Plot RTE confusion matrix
-    plot_confusion_matrix(rpe_matrix, labels_maps, labels_locs, "RPE Confusion Matrix", ax2, cmap="Blues")
+    plot_confusion_matrix(
+        rpe_matrix, labels_maps, labels_locs, "RPE Confusion Matrix", ax2, cmap="Blues"
+    )
 
     plt.suptitle(f"Evaluation {args.slam}", fontsize=16, fontweight="bold")
 
     # Adjust layout
     plt.tight_layout()
 
-
     # Optional: Save the plot
-    plt.savefig(
-        base_path + "/confusion_matrices.pdf", dpi=300, bbox_inches="tight"
-    )
-    plt.savefig(
-        base_path + "/confusion_matrices.png", dpi=300, bbox_inches="tight"
-    )
+    plt.savefig(base_path + "/confusion_matrices.pdf", dpi=300, bbox_inches="tight")
+    plt.savefig(base_path + "/confusion_matrices.png", dpi=300, bbox_inches="tight")
 
     plt.show()
 
