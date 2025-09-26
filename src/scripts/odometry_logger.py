@@ -18,13 +18,14 @@ if len(OUTPUT_FILE_NAME) == 0:
 # The full path to the output CSV file.
 CSV_FILE = os.path.join(OUTPUT_PATH_DIR, OUTPUT_FILE_NAME)
 
+
 class OdometryLogger(Node):
     """
     ROS2 Node to log odometry data in TUM format.
     """
 
     def __init__(self):
-        super().__init__('odometry_logger')
+        super().__init__("odometry_logger")
 
         # --- Setup Directory and File ---
         # This section runs once when the node starts.
@@ -37,7 +38,9 @@ class OdometryLogger(Node):
             # This ensures the node starts with a fresh log file every time.
             with open(CSV_FILE, "w") as f:
                 pass  # This will create an empty file or truncate an existing one.
-            self.get_logger().info(f"Successfully created/cleared trajectory file: {CSV_FILE}")
+            self.get_logger().info(
+                f"Successfully created/cleared trajectory file: {CSV_FILE}"
+            )
         except OSError as e:
             self.get_logger().error(f"Failed to create directory or file: {e}")
             # If we can't create the file/dir, there's no point in continuing.
@@ -50,27 +53,29 @@ class OdometryLogger(Node):
         # The 'odometry_callback' function will be executed for each message.
         self.subscription = self.create_subscription(
             Odometry,
-            '/estimated_odom',
+            "/estimated_odom",
             self.odometry_callback,
-            10  # QoS history depth
+            10,  # QoS history depth
         )
         # --- Subscribe to Topic ---
         # Subscribe to the /estimated_pose topic.
         # The 'pose_callback' function will be executed for each message.
         self.subscription = self.create_subscription(
             PoseWithCovarianceStamped,
-            '/estimated_pose_with_covariance',
+            "/estimated_pose_with_covariance",
             self.pose_with_covariance_callback,
-            10  # QoS history depth
+            10,  # QoS history depth
         )
         self.subscription = self.create_subscription(
             PoseStamped,
-            '/estimated_pose',
+            "/estimated_pose",
             self.pose_callback,
-            10  # QoS history depth
+            10,  # QoS history depth
         )
 
-        self.get_logger().info("Odometry logger started. Listening to /estimated_odom and /estimated_pose...")
+        self.get_logger().info(
+            "Odometry logger started. Listening to /estimated_odom and /estimated_pose..."
+        )
 
         # Create throttled loggers for periodic messages
         self._last_log_time = self.get_clock().now()
@@ -122,7 +127,9 @@ class OdometryLogger(Node):
         if self.active_function is None:
             self.active_function = self.odometry_callback
         elif self.active_function != self.odometry_callback:
-            self.get_logger().warn(f"Already logging data using {self.active_function.__qualname__} callback. Skipping.")
+            self.get_logger().warn(
+                f"Already logging data using {self.active_function.__qualname__} callback. Skipping."
+            )
             return
         self.write_pose(msg.pose.pose, msg.header)
 
@@ -133,10 +140,11 @@ class OdometryLogger(Node):
         if self.active_function is None:
             self.active_function = self.pose_callback
         elif self.active_function != self.pose_callback:
-            self.get_logger().warn(f"Already logging data using {self.active_function.__qualname__} callback. Skipping.")
+            self.get_logger().warn(
+                f"Already logging data using {self.active_function.__qualname__} callback. Skipping."
+            )
             return
         self.write_pose(msg.pose, msg.header)
-
 
     def pose_with_covariance_callback(self, msg: PoseWithCovarianceStamped):
         """
@@ -145,9 +153,12 @@ class OdometryLogger(Node):
         if self.active_function is None:
             self.active_function = self.pose_with_covariance_callback
         elif self.active_function != self.pose_with_covariance_callback:
-            self.get_logger().warn(f"Already logging data using {self.active_function.__qualname__} callback. Skipping.")
+            self.get_logger().warn(
+                f"Already logging data using {self.active_function.__qualname__} callback. Skipping."
+            )
             return
         self.write_pose(msg.pose.pose, msg.header)
+
 
 def main():
     """
@@ -165,9 +176,10 @@ def main():
         print(f"Error in main: {e}")
     finally:
         # Clean shutdown
-        if 'odometry_logger' in locals():
+        if "odometry_logger" in locals():
             odometry_logger.destroy_node()
         rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()
