@@ -15,32 +15,55 @@ import evo.core.geometry as geometry
 from evo.core.trajectory import PoseTrajectory3D
 from evo.core import lie_algebra as lie
 
+
 # =============================================================================
 # Configuration and Data Loading
 # =============================================================================
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Evaluate trajectories using APE and RPE metrics.")
-    parser.add_argument("--mapping_date", default="",
-                        help="Date of the deployment used for the mapping")
-    parser.add_argument("--localization_date", default="",
-                        help="Date of the deployment used for localization")
-    parser.add_argument("--slam", default="",
-                        help="Named of the SLAM used")
-    parser.add_argument("--gt", default="/reference_trajectory.txt",
-                        help="Path to the ground truth trajectory file")
-    parser.add_argument("--est", default="/estimated_trajectory.txt",
-                        help="Path to the estimated trajectory file")
-    parser.add_argument("--output", default="/evaluation_output",
-                        help="Directory to store output files")
-    parser.add_argument("--test", action='store_true',
-                        help="Use test mode with smaller RPE deltas")
-    parser.add_argument("--alignment", default='start', const='all', nargs='?', choices=['start', 'full', 'custom'], help='The alignment method to use. Start uses the first 1000 points, full uses all points')
+    parser = argparse.ArgumentParser(
+        description="Evaluate trajectories using APE and RPE metrics."
+    )
+    parser.add_argument(
+        "--mapping_date", default="", help="Date of the deployment used for the mapping"
+    )
+    parser.add_argument(
+        "--localization_date",
+        default="",
+        help="Date of the deployment used for localization",
+    )
+    parser.add_argument("--slam", default="", help="Named of the SLAM used")
+    parser.add_argument(
+        "--gt",
+        default="/reference_trajectory.txt",
+        help="Path to the ground truth trajectory file",
+    )
+    parser.add_argument(
+        "--est",
+        default="/estimated_trajectory.txt",
+        help="Path to the estimated trajectory file",
+    )
+    parser.add_argument(
+        "--output", default="/evaluation_output", help="Directory to store output files"
+    )
+    parser.add_argument(
+        "--test", action="store_true", help="Use test mode with smaller RPE deltas"
+    )
+    parser.add_argument(
+        "--alignment",
+        default="start",
+        const="all",
+        nargs="?",
+        choices=["start", "full", "custom"],
+        help="The alignment method to use. Start uses the first 1000 points, full uses all points",
+    )
     return parser.parse_args()
+
 
 def load_trajectories(gt_file, est_file):
     traj_ref = file_interface.read_tum_trajectory_file(gt_file)
     traj_est = file_interface.read_tum_trajectory_file(est_file)
     return traj_ref, traj_est
+
 
 # =============================================================================
 # Trajectory Processing: Synchronization, Alignment & Orientation
@@ -48,29 +71,31 @@ def load_trajectories(gt_file, est_file):
 def synchronize_trajectories(traj_ref, traj_est, max_diff=0.05):
     return sync.associate_trajectories(traj_ref, traj_est, max_diff)
 
+
 def accel_to_roll_pitch(ax, ay, az):
-    roll  = math.atan2(ay, az)
-    pitch = math.atan2(-ax, math.sqrt(ay*ay + az*az))
+    roll = math.atan2(ay, az)
+    pitch = math.atan2(-ax, math.sqrt(ay * ay + az * az))
     return math.pi - roll, pitch
+
 
 def approx_yaw_first_seconds(traj, odo_csv, threshold=10.0, deg=True):
     pts = np.array(traj.positions_xyz)
     timestamps = np.array(traj.timestamps)
 
-    df = pd.read_csv(odo_csv, sep=',')
-    odo_time = df['t'].to_numpy()
-    odo_pts = df[['px']].to_numpy()
+    df = pd.read_csv(odo_csv, sep=",")
+    odo_time = df["t"].to_numpy()
+    odo_pts = df[["px"]].to_numpy()
     odo_disp = odo_pts[1:] - odo_pts[0]
     odo_dist = np.linalg.norm(odo_disp, axis=1)
-    first_idx = np.searchsorted(odo_dist, 0, side='right')  # first meter
+    first_idx = np.searchsorted(odo_dist, 0, side="right")  # first meter
     print(first_idx)
     print(odo_pts[first_idx + 1])
     timestamp = odo_time[first_idx + 1]
 
-    idx = np.searchsorted(timestamps, timestamp / 10e5 + threshold, side='left')
+    idx = np.searchsorted(timestamps, timestamp / 10e5 + threshold, side="left")
 
     xy = pts[:, :2]
-    dx, dy = (xy[idx] - xy[0])
+    dx, dy = xy[idx] - xy[0]
     yaw = math.atan2(dy, dx)
     return math.degrees(yaw) if deg else yaw
 
@@ -80,64 +105,78 @@ def align_trajectories_with_imu(traj_ref_sync, traj_est_sync, imu_data, odo_csv)
     traj_est_aligned = copy.deepcopy(traj_est_sync)
 
     print(traj_ref_aligned)
-    
+
     # Get positions as numpy arrays
     ref_positions = np.array(traj_ref_aligned.positions_xyz)
     est_positions = np.array(traj_est_aligned.positions_xyz)
-    
+
     if len(ref_positions) == 0 or len(est_positions) == 0:
         raise ValueError("Trajectories cannot be empty")
-    
+
     # Step 1: Align first points (translation only)
     translation = ref_positions[0] - est_positions[0]
     est_positions_translated = est_positions + translation
 
-    roll, pitch = accel_to_roll_pitch(imu_data['ax'], imu_data['ay'], imu_data['az'])
-    yaw = approx_yaw_first_seconds(traj_ref_aligned, threshold=0.5, deg=False, odo_csv=odo_csv)
+    roll, pitch = accel_to_roll_pitch(imu_data["ax"], imu_data["ay"], imu_data["az"])
+    yaw = approx_yaw_first_seconds(
+        traj_ref_aligned, threshold=0.5, deg=False, odo_csv=odo_csv
+    )
     r = Rotation.from_euler("xyz", [roll, pitch, yaw])
     R = r.as_matrix()
 
-    print(f"IMU-derived angles (deg): roll={math.degrees(roll):.2f}, pitch={math.degrees(pitch):.2f}, yaw={math.degrees(yaw):.2f}")
+    print(
+        f"IMU-derived angles (deg): roll={math.degrees(roll):.2f}, pitch={math.degrees(pitch):.2f}, yaw={math.degrees(yaw):.2f}"
+    )
 
     # Step 3: Apply rotation around the first point
     est_positions_final = np.zeros_like(est_positions_translated)
     est_positions_final[0] = est_positions_translated[0]  # Keep first point fixed
-    
+
     # Rotate remaining points around the first point
     for i in range(1, len(est_positions_translated)):
         centered_point = est_positions_translated[i] - est_positions_translated[0]
         rotated_point = R @ centered_point
         est_positions_final[i] = rotated_point + est_positions_translated[0]
-    
+
     # Step 4: Update the trajectory poses in evo format
     for i in range(len(traj_est_aligned.poses_se3)):
         # Get the current pose matrix
         current_pose = traj_est_aligned.poses_se3[i].copy()
-        
+
         # Update translation
         current_pose[:3, 3] = est_positions_final[i]
-        
+
         # Update rotation part
         if i > 0:  # Don't rotate the first pose's orientation, only translate it
             # Apply the IMU-derived rotation to the existing rotation
             original_rotation = traj_est_aligned.poses_se3[i][:3, :3]
             new_rotation = R @ original_rotation
             current_pose[:3, :3] = new_rotation
-        
+
         # Update the pose in the trajectory
         traj_est_aligned.poses_se3[i] = current_pose
-    
+
     # Update the internal positions cache if it exists
-    if hasattr(traj_est_aligned, '_positions_xyz'):
+    if hasattr(traj_est_aligned, "_positions_xyz"):
         traj_est_aligned._positions_xyz = est_positions_final
-    
+
     return traj_ref_aligned, traj_est_aligned
 
+
 def align_trajectories(traj_ref_sync, traj_est_sync, alignment):
-    imu_data = {'ax':0.00300174998119473, 'ay':0.00699117686599493, 'az':-0.0270397216081619}
-    #imu_data = {'ax': 0.00435515958815813, 'ay': 0.0021539437584579, 'az': -0.0159614309668541}
+    imu_data = {
+        "ax": 0.00300174998119473,
+        "ay": 0.00699117686599493,
+        "az": -0.0270397216081619,
+    }
+    # imu_data = {'ax': 0.00435515958815813, 'ay': 0.0021539437584579, 'az': -0.0159614309668541}
     if alignment == "custom":
-        return align_trajectories_with_imu(traj_ref_sync, traj_est_sync, imu_data, "/mnt/synology-nas/ijrr/2024-11-21/yellow_2024-11-21-14-26/odom.csv")
+        return align_trajectories_with_imu(
+            traj_ref_sync,
+            traj_est_sync,
+            imu_data,
+            "/mnt/synology-nas/ijrr/2024-11-21/yellow_2024-11-21-14-26/odom.csv",
+        )
     traj_ref_aligned = copy.deepcopy(traj_ref_sync)
     traj_est_aligned = copy.deepcopy(traj_est_sync)
 
@@ -150,9 +189,12 @@ def align_trajectories(traj_ref_sync, traj_est_sync, alignment):
     else:
         raise ValueError("Invalid alignment type")
 
-    traj_est_aligned.align(traj_ref_aligned, correct_scale=False, correct_only_scale=False, n=n)
+    traj_est_aligned.align(
+        traj_ref_aligned, correct_scale=False, correct_only_scale=False, n=n
+    )
 
     return traj_ref_aligned, traj_est_aligned
+
 
 def set_identity_orientations(traj):
     num_poses = len(traj.positions_xyz)
@@ -161,8 +203,9 @@ def set_identity_orientations(traj):
     return PoseTrajectory3D(
         positions_xyz=traj.positions_xyz,
         orientations_quat_wxyz=identity_quats,
-        timestamps=traj.timestamps
+        timestamps=traj.timestamps,
     )
+
 
 def process_trajectories(gt_file, est_file, alignment):
     if not os.path.exists(gt_file):
@@ -181,12 +224,15 @@ def process_trajectories(gt_file, est_file, alignment):
 
     traj_ref_sync, traj_est_sync = synchronize_trajectories(traj_ref, traj_est)
     traj_ref_sync, traj_est_sync = synchronize_trajectories(traj_ref, traj_est)
-    traj_ref_aligned, traj_est_aligned = align_trajectories(traj_ref_sync, traj_est_sync, alignment)
+    traj_ref_aligned, traj_est_aligned = align_trajectories(
+        traj_ref_sync, traj_est_sync, alignment
+    )
 
     traj_ref_final = set_identity_orientations(traj_ref_aligned)
     traj_est_final = set_identity_orientations(traj_est_aligned)
 
     return traj_ref_final, traj_est_final
+
 
 # =============================================================================
 # Metric Computation: APE and RPE
@@ -198,7 +244,10 @@ def compute_ape(traj_pair):
     pose_relation = metrics.PoseRelation.translation_part
     ape_metric = metrics.APE(pose_relation)
     ape_metric.process_data(traj_pair)
-    return ape_metric.get_statistic(metrics.StatisticsType.rmse), ape_metric.get_all_statistics()
+    return ape_metric.get_statistic(
+        metrics.StatisticsType.rmse
+    ), ape_metric.get_all_statistics()
+
 
 def compute_rpe_for_delta(traj_pair, delta_meters):
     """
@@ -217,6 +266,7 @@ def compute_rpe_for_delta(traj_pair, delta_meters):
 
     return rpe_metric.get_all_statistics()
 
+
 def compute_rpe_set(traj_pair, delta_list):
     """
     Compute RPE for a list of delta values.
@@ -231,6 +281,7 @@ def compute_rpe_set(traj_pair, delta_list):
             print(f"Skipping delta {delta} due to processing error.")
     return results
 
+
 def create_rpe_table(rpe_results):
     """
     Create a table (list of lists) summarizing the RPE results.
@@ -239,24 +290,28 @@ def create_rpe_table(rpe_results):
     table_data = []
     relative_rpe_values = []
     for delta, stats in rpe_results.items():
-        rel_rpe = (stats['rmse'] / delta) * 100  # percentage
+        rel_rpe = (stats["rmse"] / delta) * 100  # percentage
         relative_rpe_values.append(rel_rpe)
-        table_data.append([
-            f"{delta}m",
-            f"RMSE: {rel_rpe:.2f}%\nSTD: {(stats['std'] / delta) * 100:.2f}%\n"
-            f"MIN: {(stats['min'] / delta) * 100:.2f}%\nMAX: {(stats['max'] / delta) * 100:.2f}%",
-            f"RMSE: {stats['rmse']:.3f} m\nSTD: {stats['std']:.3f} m\n"
-            f"MIN: {stats['min']:.3f} m\nMAX: {stats['max']:.3f} m"
-        ])
+        table_data.append(
+            [
+                f"{delta}m",
+                f"RMSE: {rel_rpe:.2f}%\nSTD: {(stats['std'] / delta) * 100:.2f}%\n"
+                f"MIN: {(stats['min'] / delta) * 100:.2f}%\nMAX: {(stats['max'] / delta) * 100:.2f}%",
+                f"RMSE: {stats['rmse']:.3f} m\nSTD: {stats['std']:.3f} m\n"
+                f"MIN: {stats['min']:.3f} m\nMAX: {stats['max']:.3f} m",
+            ]
+        )
     avg_relative_rpe = float(np.mean(relative_rpe_values))
     return table_data, avg_relative_rpe
+
 
 def compute_ate_rmse(rpe_results):
     """
     Compute an aggregated ATE RMSE value from RPE results.
     """
-    rmse_values = [stats['rmse'] for stats in rpe_results.values()]
+    rmse_values = [stats["rmse"] for stats in rpe_results.values()]
     return float(np.sqrt(np.mean(np.square(rmse_values))))
+
 
 def export_results_to_yaml(filename, avg_relative_rpe, ate_rmse, rpe_results):
     """
@@ -264,22 +319,23 @@ def export_results_to_yaml(filename, avg_relative_rpe, ate_rmse, rpe_results):
     """
     rpe_details = {
         f"{delta}m": {
-            'rmse_meters': float(stats['rmse']),
-            'std_meters': float(stats['std']),
-            'min_meters': float(stats['min']),
-            'max_meters': float(stats['max'])
+            "rmse_meters": float(stats["rmse"]),
+            "std_meters": float(stats["std"]),
+            "min_meters": float(stats["min"]),
+            "max_meters": float(stats["max"]),
         }
         for delta, stats in rpe_results.items()
     }
     data = {
-        'results': {
-            'rpe_avg_rmse_percentage': avg_relative_rpe,
-            'ate_rmse_meters': ate_rmse
+        "results": {
+            "rpe_avg_rmse_percentage": avg_relative_rpe,
+            "ate_rmse_meters": ate_rmse,
         },
-        'rpe_details': rpe_details
+        "rpe_details": rpe_details,
     }
-    with open(filename, 'w') as file:
+    with open(filename, "w") as file:
         yaml.dump(data, file)
+
 
 # =============================================================================
 # Visualization Functions
@@ -298,28 +354,48 @@ def plot_trajectory_timestamp(ax, traj_ref, traj_est, coord: str):
         index = 2
     error = np.abs(traj_ref.positions_xyz[:, index] - traj_est.positions_xyz[:, index])
     time = traj_ref.timestamps - traj_ref.timestamps[0]
-    ax.plot(time, error,
-            label=f"Error ({coord.capitalize()})", linestyle='-', marker='o', markersize=2)
+    ax.plot(
+        time,
+        error,
+        label=f"Error ({coord.capitalize()})",
+        linestyle="-",
+        marker="o",
+        markersize=2,
+    )
     ax.set_xlabel("Time (s)")
     ax.set_ylabel(f"{coord.capitalize()} Error (m)")
     ax.set_title(f"{coord.capitalize()} Trajectory Error Plot")
     ax.grid()
-    ax.set_aspect('equal', adjustable='datalim')
+    ax.set_aspect("equal", adjustable="datalim")
+
 
 def plot_trajectory_xy(ax, traj_ref, traj_est):
     """
     Plot the XY trajectories (reference and estimated) on the given axis.
     """
-    ax.plot(traj_ref.positions_xyz[:, 0], traj_ref.positions_xyz[:, 1],
-            label="Reference", linestyle='-', marker='o', markersize=2)
-    ax.plot(traj_est.positions_xyz[:, 0], traj_est.positions_xyz[:, 1],
-            label="Estimated", linestyle='-', marker='x', markersize=2)
+    ax.plot(
+        traj_ref.positions_xyz[:, 0],
+        traj_ref.positions_xyz[:, 1],
+        label="Reference",
+        linestyle="-",
+        marker="o",
+        markersize=2,
+    )
+    ax.plot(
+        traj_est.positions_xyz[:, 0],
+        traj_est.positions_xyz[:, 1],
+        label="Estimated",
+        linestyle="-",
+        marker="x",
+        markersize=2,
+    )
     ax.set_xlabel("X Position (m)")
     ax.set_ylabel("Y Position (m)")
     ax.set_title("XY Trajectory Plot")
     ax.legend()
     ax.grid()
-    ax.set_aspect('equal', adjustable='datalim')
+    ax.set_aspect("equal", adjustable="datalim")
+
 
 def set_equal_aspect_3d(ax, positions):
     """
@@ -330,18 +406,27 @@ def set_equal_aspect_3d(ax, positions):
     z_limits = [np.min(positions[:, 2]), np.max(positions[:, 2])]
     max_range = max(np.ptp(x_limits), np.ptp(y_limits), np.ptp(z_limits))
     mid_x, mid_y, mid_z = np.mean(x_limits), np.mean(y_limits), np.mean(z_limits)
-    ax.set_xlim(mid_x - max_range/2, mid_x + max_range/2)
-    ax.set_ylim(mid_y - max_range/2, mid_y + max_range/2)
-    ax.set_zlim(mid_z - max_range/2, mid_z + max_range/2)
+    ax.set_xlim(mid_x - max_range / 2, mid_x + max_range / 2)
+    ax.set_ylim(mid_y - max_range / 2, mid_y + max_range / 2)
+    ax.set_zlim(mid_z - max_range / 2, mid_z + max_range / 2)
+
 
 def plot_trajectory_3d(ax, traj_ref, traj_est):
     """
     Plot the 3D trajectories on the given axis.
     """
-    ax.plot(traj_ref.positions_xyz[:, 0], traj_ref.positions_xyz[:, 1], traj_ref.positions_xyz[:, 2],
-            label="Reference")
-    ax.plot(traj_est.positions_xyz[:, 0], traj_est.positions_xyz[:, 1], traj_est.positions_xyz[:, 2],
-            label="Estimated")
+    ax.plot(
+        traj_ref.positions_xyz[:, 0],
+        traj_ref.positions_xyz[:, 1],
+        traj_ref.positions_xyz[:, 2],
+        label="Reference",
+    )
+    ax.plot(
+        traj_est.positions_xyz[:, 0],
+        traj_est.positions_xyz[:, 1],
+        traj_est.positions_xyz[:, 2],
+        label="Estimated",
+    )
     ax.set_xlabel("X Position (m)")
     ax.set_ylabel("Y Position (m)")
     ax.set_zlabel("Z Position (m)")
@@ -350,33 +435,57 @@ def plot_trajectory_3d(ax, traj_ref, traj_est):
     ax.grid()
     set_equal_aspect_3d(ax, traj_ref.positions_xyz)
 
-def plot_summary_table(ax, avg_relative_rpe, ate_rmse, mapping_date: str, localization_date: str, slam: str):
+
+def plot_summary_table(
+    ax, avg_relative_rpe, ate_rmse, mapping_date: str, localization_date: str, slam: str
+):
     """
     Plot a summary table of the computed metrics.
     """
-    ax.axis('tight')
-    ax.axis('off')
-    ax.set_title(f"SUMMARY METRICS\n({mapping_date} to {localization_date})\nMethod: {slam}", fontsize=12, fontweight='bold')
+    ax.axis("tight")
+    ax.axis("off")
+    ax.set_title(
+        f"SUMMARY METRICS\n({mapping_date} to {localization_date})\nMethod: {slam}",
+        fontsize=12,
+        fontweight="bold",
+    )
     table_data = [[f"{avg_relative_rpe:.2f} %", f"{ate_rmse:.3f} m"]]
     col_labels = ["AVG RMSE RPE (%)", "ATE RMSE (m)"]
-    table = ax.table(cellText=table_data, colLabels=col_labels, loc='center', cellLoc='center')
+    table = ax.table(
+        cellText=table_data, colLabels=col_labels, loc="center", cellLoc="center"
+    )
     table.auto_set_font_size(False)
     table.set_fontsize(10)
     table.scale(1.0, 2.4)
+
 
 def plot_rpe_details_table(ax, rpe_table):
     """
     Plot a table showing detailed RPE results.
     """
-    ax.axis('off')
-    table = ax.table(cellText=rpe_table,
-                     colLabels=["Delta", "Relative RPE", "Absolute RPE [m]"],
-                     loc='center', cellLoc='center')
+    ax.axis("off")
+    table = ax.table(
+        cellText=rpe_table,
+        colLabels=["Delta", "Relative RPE", "Absolute RPE [m]"],
+        loc="center",
+        cellLoc="center",
+    )
     table.auto_set_font_size(False)
     table.set_fontsize(9)
     table.scale(1.0, 4.0)
 
-def create_figure(traj_ref, traj_est, rpe_table, avg_relative_rpe, ate_rmse, save_path, mapping_date: str, localization_date: str, slam: str):
+
+def create_figure(
+    traj_ref,
+    traj_est,
+    rpe_table,
+    avg_relative_rpe,
+    ate_rmse,
+    save_path,
+    mapping_date: str,
+    localization_date: str,
+    slam: str,
+):
     """
     Create and save a figure with:
     - XY trajectory plot
@@ -387,7 +496,9 @@ def create_figure(traj_ref, traj_est, rpe_table, avg_relative_rpe, ate_rmse, sav
     fig, axs = plt.subplots(3, 2, figsize=(12, 16))
 
     # Summary Table
-    plot_summary_table(axs[0, 0], avg_relative_rpe, ate_rmse, mapping_date, localization_date, slam)
+    plot_summary_table(
+        axs[0, 0], avg_relative_rpe, ate_rmse, mapping_date, localization_date, slam
+    )
 
     # RPE Details Table
     plot_rpe_details_table(axs[0, 1], rpe_table)
@@ -409,10 +520,11 @@ def create_figure(traj_ref, traj_est, rpe_table, avg_relative_rpe, ate_rmse, sav
     # plt.show()
     plt.close()
 
+
 # =============================================================================
 # Main Execution
 # =============================================================================
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = parse_arguments()
     os.makedirs(args.output, exist_ok=True)
 
@@ -427,14 +539,32 @@ if __name__ == '__main__':
     rpe_results = compute_rpe_set(traj_pair, DELTAS)
 
     if len(rpe_results) == 0:
-        print("\033[91mToo big deltas! Try turning on test mode with --test\033[0m", file=sys.stderr)
+        print(
+            "\033[91mToo big deltas! Try turning on test mode with --test\033[0m",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     rpe_table, avg_relative_rpe = create_rpe_table(rpe_results)
     ate_rmse = compute_ate_rmse(rpe_results)
 
-    yaml_filename = os.path.join(args.output, f"{args.mapping_date}_{args.localization_date}_trajectory_analysis.yaml")
+    yaml_filename = os.path.join(
+        args.output,
+        f"{args.mapping_date}_{args.localization_date}_trajectory_analysis.yaml",
+    )
     export_results_to_yaml(yaml_filename, avg_relative_rpe, ate_rmse, rpe_results)
 
-    analysis_filename = os.path.join(args.output, f"{args.mapping_date}_{args.localization_date}_trajectory_analysis")
-    create_figure(traj_pair[0], traj_pair[1], rpe_table, avg_relative_rpe, ate_rmse, analysis_filename, args.mapping_date, args.localization_date, args.slam)
+    analysis_filename = os.path.join(
+        args.output, f"{args.mapping_date}_{args.localization_date}_trajectory_analysis"
+    )
+    create_figure(
+        traj_pair[0],
+        traj_pair[1],
+        rpe_table,
+        avg_relative_rpe,
+        ate_rmse,
+        analysis_filename,
+        args.mapping_date,
+        args.localization_date,
+        args.slam,
+    )
