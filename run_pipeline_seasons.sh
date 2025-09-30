@@ -86,7 +86,7 @@ run_pipeline() {
     export MAPPING_DATE=$2
     export LOCALIZATION_DATE=$3
 
-    export PROCESSING_PATH_HOST="/tmp/data/${MAPPING_DATE}"
+    export PROCESSING_PATH_HOST="/home/alec/tmp/data/${MAPPING_DATE}"
     mkdir -p $PROCESSING_PATH_HOST
 
     info "Starting SLAM services in the background..."

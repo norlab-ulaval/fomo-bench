@@ -1,0 +1,21 @@
+FROM vtr3:latest
+
+SHELL ["/bin/bash", "-c"]
+
+COPY ASRL/vtr3/src/main/src $VTRSRC/main/src
+COPY ASRL/vtr3/src/config $VTRSRC/config
+
+ENV MAKEFLAGS="-j3"
+ENV VTR_PIPELINE=RADAR
+
+USER 0:0
+
+RUN source /opt/ros/humble/setup.bash && cd $VTRSRC/main && colcon build --symlink-install
+
+COPY ASRL/vtr3/fomo_evaluation/fomo_rtr_wrapper $VTRSRC/main/src/fomo_rtr_wrapper
+RUN source /opt/ros/humble/setup.bash && cd $VTRSRC/main && colcon build --symlink-install
+
+
+STOPSIGNAL SIGINT
+
+CMD ["/bin/bash", "-c", "source $VTRSRC/main/install/setup.bash && ros2 launch --noninteractive fomo_rtr_wrapper rtr_fomo.launch.py base_params:=cir_warthog_default.yaml"]
