@@ -7,26 +7,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/src/lib/pipeline_common.sh"
 
 # --- Main Pipeline ---
-
-# Initialize pipeline and load environment
 init_pipeline
 
-# Prepare output directory
-prepare_output_directory
-
-# Start SLAM services and verify they're running
-if ! start_slam_services; then
-    exit 1
-fi
-
-# Run bagfile playback
-play_bagfile
-
-# Run trajectory evaluation
-run_evaluation
+eval_single_trajectory $BAGFILE_PATH_HOST $BAGFILE_NAME $BAGFILE_NAME
 
 # Open the evaluation report
-REPORT_PATH="$OUTPUT_PATH_HOST/trajectory_analysis.pdf"
+REPORT_PATH="$OUTPUT_PATH_HOST/${BAGFILE_NAME}_${BAGFILE_NAME}_trajectory_analysis.pdf"
 open_report "$REPORT_PATH" "evaluation report"
 
 # The script will exit here, and the 'trap' will run the cleanup function.

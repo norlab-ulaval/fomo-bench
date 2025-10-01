@@ -16,12 +16,14 @@ readonly C_RED='\033[0;31m'
 readonly C_GREEN='\033[0;32m'
 readonly C_YELLOW='\033[0;33m'
 readonly C_BLUE='\033[0;34m'
+readonly C_GRAY='\033[0;90m'
 
 # --- Helper Functions for Logging ---
 info() { echo -e "${C_BLUE}INFO: $1${C_RESET}"; }
 success() { echo -e "${C_GREEN}SUCCESS: $1${C_RESET}"; }
 warn() { echo -e "${C_YELLOW}WARN: $1${C_RESET}"; }
 error() { echo -e "${C_RED}ERROR: $1${C_RESET}" >&2; }
+debug() { echo -e "${C_GRAY}DEBUG: $1${C_RESET}" >&2; }
 
 # --- Common Functions ---
 
@@ -84,11 +86,24 @@ prepare_output_directory() {
     mkdir -p "$OUTPUT_PATH_HOST"
 }
 
+save_slam_logs() {
+    sleep 2
+    docker logs run_slam > "${PROCESSING_PATH_HOST}/run_slam_${LOCALIZATION_DATE}.log"
+}
+
 # Start SLAM services and verify they're running
 start_slam_services() {
     info "Performing initial cleanup..."
     # Stop any containers from a previous run
     $DOCKER_COMPOSE_CMD down -v --remove-orphans
+
+    if [[ $MAPPING_DATE == $LOCALIZATION_DATE ]]; then
+        info "Setting mapping to 1"
+        export IS_MAPPING=1
+    else
+        info "Setting mapping to 0"
+        export IS_MAPPING=0
+    fi
 
     info "Starting SLAM services in the background..."
     # Start SLAM and odometry recorder in detached mode
@@ -141,4 +156,50 @@ open_report() {
     else
         error "$report_name not found at: $report_path"
     fi
+}
+
+
+# Function to run the pipeline for a given trajectory
+eval_single_trajectory() {
+    export BAGFILE_PATH_HOST=$1
+    export CALIB_PATH_HOST=$1/calib
+    export OUTPUT_FILE_NAME="${2}_${3}.txt" # name of the recorded odometry file
+
+    export REFERENCE_TRAJECTORY_FILE_HOST=$1/gt.csv
+    export ESTIMATED_TRAJECTORY_FILE_HOST=$OUTPUT_PATH_HOST/$OUTPUT_FILE_NAME
+
+    export MAPPING_DATE=$2
+    export LOCALIZATION_DATE=$3
+
+    export PROCESSING_PATH_HOST=$PROCESSING_PATH_BASE/$MAPPING_DATE
+    mkdir -p $PROCESSING_PATH_HOST
+
+    debug "Bagfile path: $BAGFILE_PATH_HOST on host"
+    debug "Calibration path: $CALIB_PATH_HOST on host"
+    debug "Odometry recording saves data to $OUTPUT_FILE_NAME"
+    debug "Estimated trajectory is stored in $ESTIMATED_TRAJECTORY_FILE_HOST on host"
+    debug "Saving tpm files to ${PROCESSING_PATH_HOST} on host"
+    # Start SLAM services and verify they're running
+    if ! start_slam_services; then
+        return 1
+    fi
+
+    # Run bagfile playback
+    play_bagfile
+
+    save_slam_logs
+
+    cleanup
+
+    # Check if the method generated a trajectory file
+    # This might be the case with SLAM methods that do loop closure
+    # In that case, the recorded trajectory would be wrong.
+    if [ -f "${PROCESSING_PATH_HOST}/trajectory.txt" ]; then
+        info "Method generated a final trajectory file, replacing existing one..."
+        mv $ESTIMATED_TRAJECTORY_FILE_HOST "${ESTIMATED_TRAJECTORY_FILE_HOST}_bak"
+        cp "${PROCESSING_PATH_HOST}/trajectory.txt" "${ESTIMATED_TRAJECTORY_FILE_HOST}"
+    fi
+
+    # Run trajectory evaluation
+    run_evaluation
 }
