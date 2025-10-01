@@ -115,7 +115,6 @@ def process_trajectories(gt_file, est_file, alignment):
         exit(1)
 
     traj_ref_sync, traj_est_sync = synchronize_trajectories(traj_ref, traj_est)
-    traj_ref_sync, traj_est_sync = synchronize_trajectories(traj_ref, traj_est)
     traj_ref_aligned, traj_est_aligned = align_trajectories(
         traj_ref_sync, traj_est_sync, alignment
     )
@@ -261,41 +260,55 @@ def plot_trajectory_timestamp(ax, traj_ref, traj_est, coord: str):
     ax.set_aspect("equal", adjustable="datalim")
 
 
-def plot_trajectory_xy(ax, traj_ref, traj_est):
+def plot_trajectory_xy(ax, traj_ref, traj_est, is_zeroed: bool):
     """
     Plot the XY trajectories (reference and estimated) on the given axis.
     """
+    x_ref = traj_ref.positions_xyz[:, 0]
+    y_ref = traj_ref.positions_xyz[:, 1]
+
+    x_est = traj_est.positions_xyz[:, 0]
+    y_est = traj_est.positions_xyz[:, 1]
+
+    if is_zeroed:
+        x_ref -= x_ref[0]
+        y_ref -= y_ref[0]
+        x_est -= x_est[0]
+        y_est -= y_est[0]
     ax.plot(
-        traj_ref.positions_xyz[:, 0],
-        traj_ref.positions_xyz[:, 1],
+        x_ref,
+        y_ref,
         label="Reference",
         linestyle="-",
         marker="o",
         markersize=2,
     )
     ax.plot(
-        traj_est.positions_xyz[:, 0],
-        traj_est.positions_xyz[:, 1],
+        x_est,
+        y_est,
         label="Estimated",
         linestyle="-",
         marker="x",
         markersize=2,
     )
     ax.scatter(
-        traj_ref.positions_xyz[0, 0],
-        traj_ref.positions_xyz[0, 1],
+        x_ref[0],
+        y_ref[0],
         label="Start",
         color="red",
         marker="o",
+        facecolors="none",
         s=50,
+        zorder=10,
     )
     ax.scatter(
-        traj_ref.positions_xyz[-1, 0],
-        traj_ref.positions_xyz[-1, 1],
+        x_ref[-1],
+        y_ref[-1],
         label="End",
         color="blue",
         marker="x",
         s=50,
+        zorder=10,
     )
     ax.set_xlabel("X Position (m)")
     ax.set_ylabel("Y Position (m)")
@@ -393,6 +406,7 @@ def create_figure(
     mapping_date: str,
     localization_date: str,
     slam: str,
+    is_zeroed: bool,
 ):
     """
     Create and save a figure with:
@@ -416,7 +430,7 @@ def create_figure(
     plot_trajectory_timestamp(axs[2, 0], traj_ref, traj_est, "z")
 
     # XY Trajectory Plot
-    plot_trajectory_xy(axs[2, 1], traj_ref, traj_est)
+    plot_trajectory_xy(axs[2, 1], traj_ref, traj_est, is_zeroed)
 
     # 3D Trajectory Plot (added as subplot 3)
     # ax_3d = fig.add_subplot(4, 2, 7, projection='3d')
