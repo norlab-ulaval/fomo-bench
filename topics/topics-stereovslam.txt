@@ -1,0 +1,4 @@
+/zedx/left/camera_info
+/zedx/left/image_rect
+/zedx/right/camera_info
+/zedx/right/image_rect
