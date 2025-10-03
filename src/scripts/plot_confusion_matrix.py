@@ -186,6 +186,7 @@ if __name__ == "__main__":
     # Optional: Save the plot
     plt.savefig(base_path + "/confusion_matrices.pdf", dpi=300, bbox_inches="tight")
     plt.savefig(base_path + "/confusion_matrices.png", dpi=300, bbox_inches="tight")
+    plt.savefig(base_path + "/confusion_matrices.svg", dpi=300, bbox_inches="tight")
 
     plt.show()
 
