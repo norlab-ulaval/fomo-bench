@@ -28,8 +28,16 @@ debug() { echo -e "${C_GRAY}DEBUG: $1${C_RESET}" >&2; }
 # --- Common Functions ---
 
 # Function to be called on script exit or interruption (Ctrl+C)
+stop_containers() {
+    info "Stopping all containers."
+    # Use the determined DOCKER_COMPOSE_CMD to ensure consistency
+    ${DOCKER_COMPOSE_CMD:-docker compose} stop
+    success "Stopping complete."
+}
+
+# Function to be called on script exit or interruption (Ctrl+C)
 cleanup() {
-    info "Running cleanup... Stopping all related containers."
+    info "Running cleanup... Removing all related containers."
     # Use the determined DOCKER_COMPOSE_CMD to ensure consistency
     ${DOCKER_COMPOSE_CMD:-docker compose} down -v --remove-orphans
     success "Cleanup complete."
@@ -187,6 +195,10 @@ eval_single_trajectory() {
     # Run bagfile playback
     play_bagfile
 
+    # Stop all containers
+    stop_containers
+
+    # Any container output should be saved at this point
     save_slam_logs
 
     cleanup
