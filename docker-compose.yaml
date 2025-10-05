@@ -123,6 +123,7 @@ services:
         hostname: run_slam
         networks:
             - ros-net
+        user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
         environment:
             # ROS2 Domain ID for network isolation
             ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
