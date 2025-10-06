@@ -2,7 +2,7 @@
 
 services:
     record_odometry:
-        image: fomo-bench:latest
+        image: ghcr.io/norlab-ulaval/fomo-bench:latest
         init: true
         container_name: record_odometry
         hostname: record_odometry
@@ -30,7 +30,7 @@ services:
         ipc: host
 
     play_bag:
-        image: fomo-bench:latest
+        image: ghcr.io/norlab-ulaval/fomo-bench:latest
         init: true
         container_name: play_bag
         hostname: play_bag
@@ -60,7 +60,7 @@ services:
         ipc: host
 
     run_foxglove:
-        image: fomo-bench:latest
+        image: ghcr.io/norlab-ulaval/fomo-bench:latest
         init: true
         container_name: run_foxglove
         hostname: run_foxglove
@@ -123,6 +123,7 @@ services:
         hostname: run_slam
         networks:
             - ros-net
+        user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
         environment:
             # ROS2 Domain ID for network isolation
             ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
@@ -147,7 +148,7 @@ services:
     # This service does not perform ROS communication, so it doesn't need network config.
     evaluate_trajectory:
         init: true
-        image: fomo-bench:latest
+        image: ghcr.io/norlab-ulaval/fomo-bench:latest
         container_name: evaluate_trajectory
         user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
         environment:
@@ -165,7 +166,7 @@ services:
     # This service does not perform ROS communication, so it doesn't need network config.
     plot_confusion_matrix:
         init: true
-        image: fomo-bench:latest
+        image: ghcr.io/norlab-ulaval/fomo-bench:latest
         container_name: plot_confusion_matrix
         user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
         environment:

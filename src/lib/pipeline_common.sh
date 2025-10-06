@@ -28,8 +28,16 @@ debug() { echo -e "${C_GRAY}DEBUG: $1${C_RESET}" >&2; }
 # --- Common Functions ---
 
 # Function to be called on script exit or interruption (Ctrl+C)
+stop_containers() {
+    info "Stopping all containers."
+    # Use the determined DOCKER_COMPOSE_CMD to ensure consistency
+    ${DOCKER_COMPOSE_CMD:-docker compose} stop
+    success "Stopping complete."
+}
+
+# Function to be called on script exit or interruption (Ctrl+C)
 cleanup() {
-    info "Running cleanup... Stopping all related containers."
+    info "Running cleanup... Removing all related containers."
     # Use the determined DOCKER_COMPOSE_CMD to ensure consistency
     ${DOCKER_COMPOSE_CMD:-docker compose} down -v --remove-orphans
     success "Cleanup complete."
@@ -47,6 +55,12 @@ init_pipeline() {
             echo "  cp .env.example .env"
             echo "Then, modify .env to match your environment."
         fi
+        exit 1
+    fi
+
+    # Check if Docker is running
+    if ! docker info > /dev/null 2>&1; then
+        error "Docker is not running"
         exit 1
     fi
 
@@ -74,13 +88,15 @@ prepare_output_directory() {
         exit 1
     fi
 
-    info "Removing previous output directory: $OUTPUT_PATH_HOST"
-    # Only remove if the directory actually exists
+    info "Checking if the output directory: $OUTPUT_PATH_HOST already exists"
     if [ -d "$OUTPUT_PATH_HOST" ]; then
-        rm -rf "$OUTPUT_PATH_HOST"
-        success "Previous output directory removed."
-    else
-        warn "Previous output directory not found. Nothing to remove."
+        if [ "${OVERWRITE:-0}" -eq 1 ]; then
+            info "Overwriting existing output directory"
+            rm -rf "$OUTPUT_PATH_HOST"
+        else
+            error "The output directory already exists. Please remove it manually before proceeding."
+            exit 1
+        fi
     fi
     # Create the output directory for the new run
     mkdir -p "$OUTPUT_PATH_HOST"
@@ -174,6 +190,11 @@ eval_single_trajectory() {
     export PROCESSING_PATH_HOST=$PROCESSING_PATH_BASE/$MAPPING_DATE
     mkdir -p $PROCESSING_PATH_HOST
 
+    if [ ! -d "$BAGFILE_PATH_HOST" ]; then
+        error "Bagfile path: $BAGFILE_PATH_HOST does not exist on host"
+        exit 1
+    fi
+
     debug "Bagfile path: $BAGFILE_PATH_HOST on host"
     debug "Calibration path: $CALIB_PATH_HOST on host"
     debug "Odometry recording saves data to $OUTPUT_FILE_NAME"
@@ -187,6 +208,10 @@ eval_single_trajectory() {
     # Run bagfile playback
     play_bagfile
 
+    # Stop all containers
+    stop_containers
+
+    # Any container output should be saved at this point
     save_slam_logs
 
     cleanup

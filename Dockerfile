@@ -1,5 +1,4 @@
-ARG BASE_IMAGE=arm64v8/ros:humble
-FROM ${BASE_IMAGE}
+FROM ros:humble-ros-base
 
 # Fix for Hash Sum mismatch error
 # from this link https://stackoverflow.com/questions/67732260/how-to-fix-hash-sum-mismatch-in-docker-on-mac
