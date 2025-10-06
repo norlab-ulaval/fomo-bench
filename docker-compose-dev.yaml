@@ -2,34 +2,24 @@ services:
   play_bag:
     build:
       context: .
-      args:
-        BASE_IMAGE: ${BASE_IMAGE}
     image: fomo-bench:latest
 
   evaluate_trajectory:
     build:
       context: .
-      args:
-        BASE_IMAGE: ${BASE_IMAGE}
     image: fomo-bench:latest
 
   plot_confusion_matrix:
     build:
       context: .
-      args:
-        BASE_IMAGE: ${BASE_IMAGE}
     image: fomo-bench:latest
 
   record_odometry:
     build:
       context: .
-      args:
-        BASE_IMAGE: ${BASE_IMAGE}
     image: fomo-bench:latest
 
   run_foxglove:
     build:
       context: .
-      args:
-        BASE_IMAGE: ${BASE_IMAGE}
     image: fomo-bench:latest
