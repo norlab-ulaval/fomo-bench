@@ -46,6 +46,11 @@ def parse_arguments():
         "--test", action="store_true", help="Use test mode with smaller RPE deltas"
     )
     parser.add_argument(
+        "--zero",
+        action="store_true",
+        help="Transform the trajectories to start at the origin",
+    )
+    parser.add_argument(
         "--alignment",
         default="start",
         const="all",
@@ -489,4 +494,5 @@ if __name__ == "__main__":
         args.mapping_date,
         args.localization_date,
         args.slam,
+        args.zero,
     )
