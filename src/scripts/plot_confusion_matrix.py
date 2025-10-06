@@ -27,7 +27,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Evaluate trajectories using APE and RPE metrics."
     )
-    parser.add_argument("--slam", required=True, help="Named of the SLAM used")
+    parser.add_argument("--slam", default="", help="Named of the SLAM used")
     parser.add_argument(
         "--path", default="/evaluation_output", help="Directory containing the results"
     )

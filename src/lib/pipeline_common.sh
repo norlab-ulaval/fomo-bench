@@ -58,6 +58,12 @@ init_pipeline() {
         exit 1
     fi
 
+    # Check if Docker is running
+    if ! docker info > /dev/null 2>&1; then
+        error "Docker is not running"
+        exit 1
+    fi
+
     # Load environment variables from .env
     set -o allexport
     source .env
@@ -181,6 +187,11 @@ eval_single_trajectory() {
 
     export PROCESSING_PATH_HOST=$PROCESSING_PATH_BASE/$MAPPING_DATE
     mkdir -p $PROCESSING_PATH_HOST
+
+    if [ ! -d "$BAGFILE_PATH_HOST" ]; then
+        error "Bagfile path: $BAGFILE_PATH_HOST does not exist on host"
+        exit 1
+    fi
 
     debug "Bagfile path: $BAGFILE_PATH_HOST on host"
     debug "Calibration path: $CALIB_PATH_HOST on host"
