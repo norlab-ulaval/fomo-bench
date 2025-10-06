@@ -88,13 +88,15 @@ prepare_output_directory() {
         exit 1
     fi
 
-    info "Removing previous output directory: $OUTPUT_PATH_HOST"
-    # Only remove if the directory actually exists
+    info "Checking if the output directory: $OUTPUT_PATH_HOST already exists"
     if [ -d "$OUTPUT_PATH_HOST" ]; then
-        rm -rf "$OUTPUT_PATH_HOST"
-        success "Previous output directory removed."
-    else
-        warn "Previous output directory not found. Nothing to remove."
+        if [ "${OVERWRITE:-0}" -eq 1 ]; then
+            info "Overwriting existing output directory"
+            rm -rf "$OUTPUT_PATH_HOST"
+        else
+            error "The output directory already exists. Please remove it manually before proceeding."
+            exit 1
+        fi
     fi
     # Create the output directory for the new run
     mkdir -p "$OUTPUT_PATH_HOST"
