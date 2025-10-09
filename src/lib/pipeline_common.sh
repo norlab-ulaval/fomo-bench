@@ -71,7 +71,7 @@ init_pipeline() {
 
     # Determine which docker-compose files to use
     DOCKER_COMPOSE_CMD="docker compose"
-    if [[ "${DEV_DOCKER:-false}" == "true" ]]; then
+    if [[ "${DEV_DOCKER:-0}" == 1 ]]; then
         info "Development mode is enabled. Using local Dockerfile."
         DOCKER_COMPOSE_CMD="docker compose -f docker-compose.yaml -f docker-compose-dev.yaml"
     fi
@@ -94,8 +94,12 @@ prepare_output_directory() {
             info "Overwriting existing output directory"
             rm -rf "$OUTPUT_PATH_HOST"
         else
-            error "The output directory already exists. Please remove it manually before proceeding."
-            exit 1
+            if [ "${RUN_SLAM:-0}" -eq 1 ]; then
+                error "Output directory already exists. Please remove it manually before proceeding with SLAM."
+                exit 1
+            else
+                info "Output directory already exists. Recomputing evaluation metrics..."
+            fi
         fi
     fi
     # Create the output directory for the new run
@@ -195,34 +199,36 @@ eval_single_trajectory() {
         exit 1
     fi
 
-    debug "Bagfile path: $BAGFILE_PATH_HOST on host"
-    debug "Calibration path: $CALIB_PATH_HOST on host"
-    debug "Odometry recording saves data to $OUTPUT_FILE_NAME"
-    debug "Estimated trajectory is stored in $ESTIMATED_TRAJECTORY_FILE_HOST on host"
-    debug "Saving tpm files to ${PROCESSING_PATH_HOST} on host"
-    # Start SLAM services and verify they're running
-    if ! start_slam_services; then
-        return 1
-    fi
+    if [ "${RUN_SLAM:-0}" -eq 1 ]; then
+        debug "Bagfile path: $BAGFILE_PATH_HOST on host"
+        debug "Calibration path: $CALIB_PATH_HOST on host"
+        debug "Odometry recording saves data to $OUTPUT_FILE_NAME"
+        debug "Estimated trajectory is stored in $ESTIMATED_TRAJECTORY_FILE_HOST on host"
+        debug "Saving tpm files to ${PROCESSING_PATH_HOST} on host"
+        # Start SLAM services and verify they're running
+        if ! start_slam_services; then
+            return 1
+        fi
 
-    # Run bagfile playback
-    play_bagfile
+        # Run bagfile playback
+        play_bagfile
 
-    # Stop all containers
-    stop_containers
+        # Stop all containers
+        stop_containers
 
-    # Any container output should be saved at this point
-    save_slam_logs
+        # Any container output should be saved at this point
+        save_slam_logs
 
-    cleanup
+        cleanup
 
-    # Check if the method generated a trajectory file
-    # This might be the case with SLAM methods that do loop closure
-    # In that case, the recorded trajectory would be wrong.
-    if [ -f "${PROCESSING_PATH_HOST}/trajectory.txt" ]; then
-        info "Method generated a final trajectory file, replacing existing one..."
-        mv $ESTIMATED_TRAJECTORY_FILE_HOST "${ESTIMATED_TRAJECTORY_FILE_HOST}_bak"
-        cp "${PROCESSING_PATH_HOST}/trajectory.txt" "${ESTIMATED_TRAJECTORY_FILE_HOST}"
+        # Check if the method generated a trajectory file
+        # This might be the case with SLAM methods that do loop closure
+        # In that case, the recorded trajectory would be wrong.
+        if [ -f "${PROCESSING_PATH_HOST}/trajectory.txt" ]; then
+            info "Method generated a final trajectory file, replacing existing one..."
+            mv $ESTIMATED_TRAJECTORY_FILE_HOST "${ESTIMATED_TRAJECTORY_FILE_HOST}_bak"
+            cp "${PROCESSING_PATH_HOST}/trajectory.txt" "${ESTIMATED_TRAJECTORY_FILE_HOST}"
+        fi
     fi
 
     # Run trajectory evaluation
