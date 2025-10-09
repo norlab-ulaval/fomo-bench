@@ -7,18 +7,18 @@ import os
 
 def create_deployment_mapping():
     deployment_mapping = {
-        "2024-11-21": "November21",
-        "2024-11-28": "November28",
-        "2025-01-10": "January10",
-        "2025-01-29": "January29",
-        "2025-01-30": "January29",
-        "2025-03-10": "March",
-        "2025-03-14": "March",
-        "2025-04-16": "April",
+        "2024-11-21": "Nov21",
+        "2024-11-28": "Nov28",
+        "2025-01-10": "Jan10",
+        "2025-01-29": "Jan29",
+        "2025-01-30": "Jan29",
+        "2025-03-10": "Mar",
+        "2025-03-14": "Mar",
+        "2025-04-16": "Apr",
         "2025-05-28": "May",
-        "2025-06-26": "June",
-        "2025-08-20": "August",
-        "2025-09-24": "September",
+        "2025-06-26": "Jun",
+        "2025-08-20": "Aug",
+        "2025-09-24": "Sep",
     }
     return deployment_mapping
 
@@ -175,7 +175,12 @@ if __name__ == "__main__":
 
     # Plot RTE confusion matrix
     plot_confusion_matrix(
-        rpe_matrix, labels_maps, labels_locs, "RPE Confusion Matrix", ax2, cmap="Blues"
+        rpe_matrix,
+        labels_maps,
+        labels_locs,
+        f"RPE over {args.delta} m",
+        ax2,
+        cmap="Blues",
     )
 
     plt.suptitle(f"Evaluation {args.slam}", fontsize=16, fontweight="bold")
@@ -185,7 +190,7 @@ if __name__ == "__main__":
 
     # Optional: Save the plot
     plt.savefig(base_path + "/confusion_matrices.pdf", dpi=300, bbox_inches="tight")
-    plt.savefig(base_path + "/confusion_matrices.png", dpi=300, bbox_inches="tight")
+    plt.savefig(base_path + "/confusion_matrices.jpg", dpi=300, bbox_inches="tight")
     plt.savefig(base_path + "/confusion_matrices.svg", dpi=300, bbox_inches="tight")
 
     plt.show()
