@@ -52,11 +52,10 @@ def parse_arguments():
     )
     parser.add_argument(
         "--alignment",
-        default="start",
-        const="all",
+        default="full",
         nargs="?",
-        choices=["start", "full"],
-        help="The alignment method to use. Start uses the first 1000 points, full uses all points",
+        choices=["start", "full", "kabsch"],
+        help="The alignment method to use. Start uses the first 100 points, full uses all points",
     )
     return parser.parse_args()
 
@@ -67,6 +66,49 @@ def load_trajectories(gt_file, est_file):
     return traj_ref, traj_est
 
 
+def kabsch_algorithm(traj1, traj2) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Modified Kabsch algorithm that fixes first points and finds optimal rotation.
+
+    Parameters:
+    traj1, traj2: numpy arrays of shape (n_points, 3) representing 3D trajectories
+
+    Returns:
+    r_a: rotation matrix (3x3) for evo transform
+    t_a: translation vector (3,) for evo transform
+    """
+
+    traj1 = np.array(traj1)
+    traj2 = np.array(traj2)
+
+    # Translation to align first points
+    t_a = traj1[0] - traj2[0]
+
+    # Center trajectories at first point
+    traj1_centered = traj1 - traj1[0]
+    traj2_centered = traj2 - traj2[0]
+
+    # Use points 1 onward for rotation alignment (skip first point which is fixed)
+    P = traj1_centered[1:4000].T  # 3 x (n-1) - target points
+    Q = traj2_centered[1:4000].T  # 3 x (n-1) - points to rotate
+
+    # Compute cross-covariance matrix
+    H = Q @ P.T
+
+    # SVD of cross-covariance matrix
+    U, S, Vt = np.linalg.svd(H)
+
+    # Compute rotation matrix
+    r_a = Vt.T @ U.T
+
+    # Ensure proper rotation (det(R) = 1)
+    if np.linalg.det(r_a) < 0:
+        Vt[-1, :] *= -1
+        r_a = Vt.T @ U.T
+
+    return r_a, t_a
+
+
 # =============================================================================
 # Trajectory Processing: Synchronization, Alignment & Orientation
 # =============================================================================
@@ -74,22 +116,28 @@ def synchronize_trajectories(traj_ref, traj_est, max_diff=0.05):
     return sync.associate_trajectories(traj_ref, traj_est, max_diff)
 
 
-def align_trajectories(traj_ref_sync, traj_est_sync, alignment):
+def align_trajectories(
+    traj_ref_sync: PoseTrajectory3D, traj_est_sync: PoseTrajectory3D, alignment: str
+) -> tuple[PoseTrajectory3D, PoseTrajectory3D]:
     traj_ref_aligned = copy.deepcopy(traj_ref_sync)
     traj_est_aligned = copy.deepcopy(traj_est_sync)
 
     if alignment == "start":
-        n = 100
+        traj_est_aligned.align(
+            traj_ref_aligned, correct_scale=False, correct_only_scale=False, n=1000
+        )
     elif alignment == "full":
-        n = -1
-    elif alignment == "single":
-        n = 1
+        traj_est_aligned.align(
+            traj_ref_aligned, correct_scale=False, correct_only_scale=False, n=-1
+        )
+    elif alignment == "kabsch":
+        r_a, t_a = kabsch_algorithm(
+            traj_ref_aligned.positions_xyz, traj_est_aligned.positions_xyz
+        )
+        traj_est_aligned.transform(lie.se3(r_a, t_a))
     else:
         raise ValueError("Invalid alignment type")
 
-    traj_est_aligned.align(
-        traj_ref_aligned, correct_scale=False, correct_only_scale=False, n=n
-    )
     return traj_ref_aligned, traj_est_aligned
 
 
@@ -104,7 +152,7 @@ def set_identity_orientations(traj):
     )
 
 
-def process_trajectories(gt_file, est_file, alignment):
+def process_trajectories(gt_file: str, est_file: str, alignment: str):
     if not os.path.exists(gt_file):
         print(f"File {gt_file} does not exist (gt_file)")
         exit(1)
@@ -124,8 +172,27 @@ def process_trajectories(gt_file, est_file, alignment):
         traj_ref_sync, traj_est_sync, alignment
     )
 
-    traj_ref_final = set_identity_orientations(traj_ref_aligned)
-    traj_est_final = set_identity_orientations(traj_est_aligned)
+    fig = plt.figure(figsize=(10, 10))
+    plt.plot(
+        traj_ref_aligned.positions_xyz[:3000, 0],
+        traj_ref_aligned.positions_xyz[:3000, 1],
+        label="Ground Truth",
+    )
+    plt.plot(
+        traj_est_aligned.positions_xyz[:3000, 0],
+        traj_est_aligned.positions_xyz[:3000, 1],
+        label="Estimated",
+    )
+    plt.legend()
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.title("Trajectory Comparison")
+    plt.show()
+
+    # traj_ref_final = set_identity_orientations(traj_ref_aligned)
+    # traj_est_final = set_identity_orientations(traj_est_aligned)
+    traj_ref_final = traj_ref_aligned
+    traj_est_final = traj_est_aligned
 
     return traj_ref_final, traj_est_final
 
@@ -283,7 +350,7 @@ def plot_trajectory_xy(ax, traj_ref, traj_est, is_zeroed: bool):
     ax.plot(
         x_ref,
         y_ref,
-        label="Reference",
+        label="Ground Truth (GNSS)",
         linestyle="-",
         marker="o",
         markersize=2,
@@ -291,7 +358,7 @@ def plot_trajectory_xy(ax, traj_ref, traj_est, is_zeroed: bool):
     ax.plot(
         x_est,
         y_est,
-        label="Estimated",
+        label="Lidar SLAM",
         linestyle="-",
         marker="x",
         markersize=2,
@@ -345,13 +412,13 @@ def plot_trajectory_3d(ax, traj_ref, traj_est):
         traj_ref.positions_xyz[:, 0],
         traj_ref.positions_xyz[:, 1],
         traj_ref.positions_xyz[:, 2],
-        label="Reference",
+        label="Ground Truth (GNSS)",
     )
     ax.plot(
         traj_est.positions_xyz[:, 0],
         traj_est.positions_xyz[:, 1],
         traj_est.positions_xyz[:, 2],
-        label="Estimated",
+        label="Lidar SLAM",
     )
     ax.set_xlabel("X Position (m)")
     ax.set_ylabel("Y Position (m)")
