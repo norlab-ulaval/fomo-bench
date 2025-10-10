@@ -46,7 +46,8 @@ fi
 # Append basic topics to the list of topics
 TOPICS=("${TOPICS[@]}" "/tf_static" "/vectornav/data_raw" "/xsens/data_raw" "/warthog/platform/odom")
 
-
+echo "Sleeping for $BAG_DELAY_SEC seconds."
+sleep $BAG_DELAY_SEC
 ROSBAG_PLAY_COMMAND="ros2 bag play ${BAG_FILES_TO_PLAY} --clock -r${ROSBAG_PLAY_RATE} --read-ahead-queue-size 10000 -s mcap"
 # if TOPICS is not empty, play only the topics in TOPICS
 if [ -n "$TOPICS" ]; then

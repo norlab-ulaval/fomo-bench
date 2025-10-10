@@ -50,6 +50,7 @@ services:
             ROSBAG_PLAY_RATE: ${ROSBAG_PLAY_RATE}
             TOPICS_FILE: ${TOPICS_FILE}
             ROS_HOME: /tmp/.ros
+            BAG_DELAY_SEC: ${BAG_DELAY_SEC}
         volumes:
             - ${BAGFILE_PATH_HOST}:/rosbag_file
             - ${TOPICS_FILE}:/tmp/topics.txt

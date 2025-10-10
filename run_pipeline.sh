@@ -9,7 +9,7 @@ source "${SCRIPT_DIR}/src/lib/pipeline_common.sh"
 # --- Main Pipeline ---
 init_pipeline
 
-eval_single_trajectory $BAGFILE_PATH_HOST $BAGFILE_NAME $BAGFILE_NAME
+eval_single_trajectory $BAGFILE_PATH_HOST $MAPPING_DATE $BAGFILE_NAME
 
 # Open the evaluation report
 REPORT_PATH="$OUTPUT_PATH_HOST/${BAGFILE_NAME}_${BAGFILE_NAME}_trajectory_analysis.pdf"

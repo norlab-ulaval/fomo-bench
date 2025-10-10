@@ -123,32 +123,30 @@ start_slam_services() {
 
     info "Starting SLAM services in the background..."
     # Start SLAM and odometry recorder in detached mode
-    $DOCKER_COMPOSE_CMD up -d run_slam record_odometry run_foxglove
+    $DOCKER_COMPOSE_CMD up --no-attach run_slam --no-attach record_odometry --no-attach run_foxglove --attach play_bag --exit-code-from run_slam run_slam record_odometry run_foxglove play_bag
+    # info "Verifying that background services are running..."
+    # sleep 5 # Give services a moment to start or fail. Adjust if your SLAM system takes longer to initialize.
 
-    info "Verifying that background services are running..."
-    sleep 5 # Give services a moment to start or fail. Adjust if your SLAM system takes longer to initialize.
+    # # Specifically check the 'run_slam' service, as it's the most likely to fail.
+    # # We get a list of services with status "running" and check if run_slam is in it.
+    # RUN_SLAM_STATUS=$($DOCKER_COMPOSE_CMD ps --services --filter "status=running" | grep -w "run_slam" || true)
 
-    # Specifically check the 'run_slam' service, as it's the most likely to fail.
-    # We get a list of services with status "running" and check if run_slam is in it.
-    RUN_SLAM_STATUS=$($DOCKER_COMPOSE_CMD ps --services --filter "status=running" | grep -w "run_slam" || true)
-
-    if [ -z "$RUN_SLAM_STATUS" ]; then
-        error "'run_slam' service failed to start or exited unexpectedly."
-        info "Showing recent logs for 'run_slam' to help diagnose:"
-        # Show the last 20 lines of the log to help the user.
-        $DOCKER_COMPOSE_CMD logs --tail=20 run_slam
-        # The script will exit here, and the 'trap' will run the cleanup function.
-        return 1
-    else
-        success "'run_slam' service started successfully."
-        return 0
-    fi
+    # if [ -z "$RUN_SLAM_STATUS" ]; then
+    #     error "'run_slam' service failed to start or exited unexpectedly."
+    #     info "Showing recent logs for 'run_slam' to help diagnose:"
+    #     # Show the last 20 lines of the log to help the user.
+    #     $DOCKER_COMPOSE_CMD logs --tail=20 run_slam
+    #     # The script will exit here, and the 'trap' will run the cleanup function.
+    #     return 1
+    # else
+    #     success "'run_slam' service started successfully."
+    #     return 0
+    # fi
 }
 
 # Run bagfile playback
 play_bagfile() {
     info "Starting bagfile playback. This will block until finished..."
-    $DOCKER_COMPOSE_CMD up play_bag
     success "Bagfile playback complete."
 }
 
@@ -209,12 +207,12 @@ eval_single_trajectory() {
     play_bagfile
 
     # Stop all containers
-    stop_containers
+    # stop_containers
 
     # Any container output should be saved at this point
     save_slam_logs
 
-    cleanup
+    #cleanup
 
     # Check if the method generated a trajectory file
     # This might be the case with SLAM methods that do loop closure
