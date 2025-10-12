@@ -31,9 +31,6 @@ def parse_arguments():
     parser.add_argument(
         "--path", default="/evaluation_output", help="Directory containing the results"
     )
-    parser.add_argument(
-        "--delta", default="5", help="The delta value used for the RPE confusion matrix"
-    )
     return parser.parse_args()
 
 
@@ -41,7 +38,7 @@ def get_traj_names_from_file_name(file_name):
     return file_name.split("_")[1], file_name.split("_")[3]
 
 
-def construct_matrices(path: str, delta: float):
+def construct_matrices(path: str):
     # get the number of yaml files in the directory
     yaml_files = [f for f in os.listdir(path) if f.endswith(".yaml")]
     yaml_files.sort()
@@ -74,8 +71,13 @@ def construct_matrices(path: str, delta: float):
             # Process data here
             #
             ape = data["results"]["ate_rmse_meters"]
-            rpe = data["rpe_details"][f"{delta}m"]["rmse_meters"]
-
+            rpe = []
+            for delta in range(100, 801, 100):
+                relative_drift = (
+                    100 * data["rpe_details"][f"{delta}m"]["rmse_meters"] / delta
+                )
+                rpe.append(relative_drift)
+            rpe = np.mean(rpe)
             map_idx = unique_map_name_index_map[map_traj]
             loc_idx = unique_loc_name_index_map[loc_traj]
             # Update the matrices
@@ -117,7 +119,7 @@ def plot_confusion_matrix(matrix, labels_maps, labels_locs, title, ax, cmap="Red
 
     # Add colorbar
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
-    cbar.set_label("Error Value [m]", rotation=90, labelpad=15)
+    cbar.set_label("Value", rotation=90, labelpad=15)
 
     # Set ticks and labels
     ax.set_xticks(range(len(labels_locs)))
@@ -150,8 +152,8 @@ def plot_confusion_matrix(matrix, labels_maps, labels_locs, title, ax, cmap="Red
                 ax.text(j, i, "N/A", ha="center", va="center", color="gray", fontsize=8)
 
     # Labels and title
-    ax.set_xlabel("Localization Month", fontsize=12, fontweight="bold")
-    ax.set_ylabel("Mapping Month", fontsize=12, fontweight="bold")
+    ax.set_xlabel("Localization Deployment", fontsize=12, fontweight="bold")
+    ax.set_ylabel("Mapping Deployment", fontsize=12, fontweight="bold")
     ax.set_title(title, fontsize=14, fontweight="bold", pad=20)
 
     # Add grid
@@ -163,11 +165,10 @@ def plot_confusion_matrix(matrix, labels_maps, labels_locs, title, ax, cmap="Red
 if __name__ == "__main__":
     args = parse_arguments()
     base_path = args.path
+    ape_matrix, rpe_matrix, labels_maps, labels_locs = construct_matrices(base_path)
+
     # Create the plot
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-    ape_matrix, rpe_matrix, labels_maps, labels_locs = construct_matrices(
-        base_path, args.delta
-    )
     # Plot ATE confusion matrix
     plot_confusion_matrix(
         ape_matrix, labels_maps, labels_locs, "APE Confusion Matrix", ax1, cmap="Reds"
@@ -178,7 +179,7 @@ if __name__ == "__main__":
         rpe_matrix,
         labels_maps,
         labels_locs,
-        f"RPE over {args.delta} m",
+        f"Mean translation drift",
         ax2,
         cmap="Blues",
     )

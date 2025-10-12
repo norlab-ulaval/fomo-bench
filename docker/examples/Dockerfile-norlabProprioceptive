@@ -1,5 +1,4 @@
-ARG from=ros:humble-ros-base
-FROM ${from}
+FROM ros:humble-ros-base
 
 SHELL ["/bin/bash", "-c"]
 

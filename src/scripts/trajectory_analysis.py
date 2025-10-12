@@ -88,9 +88,12 @@ def kabsch_algorithm(traj1, traj2) -> tuple[np.ndarray, np.ndarray]:
     traj1_centered = traj1 - traj1[0]
     traj2_centered = traj2 - traj2[0]
 
+    target_len = int(0.25 * traj1_centered.shape[0])
+    print(f"Using first {target_len} points for alingment")
+
     # Use points 1 onward for rotation alignment (skip first point which is fixed)
-    P = traj1_centered[1:4000].T  # 3 x (n-1) - target points
-    Q = traj2_centered[1:4000].T  # 3 x (n-1) - points to rotate
+    P = traj1_centered[1:target_len].T  # 3 x (n-1) - target points
+    Q = traj2_centered[1:target_len].T  # 3 x (n-1) - points to rotate
 
     # Compute cross-covariance matrix
     H = Q @ P.T
@@ -171,23 +174,6 @@ def process_trajectories(gt_file: str, est_file: str, alignment: str):
     traj_ref_aligned, traj_est_aligned = align_trajectories(
         traj_ref_sync, traj_est_sync, alignment
     )
-
-    fig = plt.figure(figsize=(10, 10))
-    plt.plot(
-        traj_ref_aligned.positions_xyz[:3000, 0],
-        traj_ref_aligned.positions_xyz[:3000, 1],
-        label="Ground Truth",
-    )
-    plt.plot(
-        traj_est_aligned.positions_xyz[:3000, 0],
-        traj_est_aligned.positions_xyz[:3000, 1],
-        label="Estimated",
-    )
-    plt.legend()
-    plt.xlabel("X")
-    plt.ylabel("Y")
-    plt.title("Trajectory Comparison")
-    plt.show()
 
     # traj_ref_final = set_identity_orientations(traj_ref_aligned)
     # traj_est_final = set_identity_orientations(traj_est_aligned)

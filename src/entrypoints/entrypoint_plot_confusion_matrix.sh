@@ -8,9 +8,5 @@ if [ -n "$SLAM_NAME" ]; then
     COMMAND="$COMMAND --slam $SLAM_NAME"
 fi
 
-if [ -n "$DELTA" ]; then
-    COMMAND="$COMMAND --delta $DELTA"
-fi
-
 echo "Running command: $COMMAND"
 $COMMAND
