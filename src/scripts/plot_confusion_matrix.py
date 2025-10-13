@@ -71,13 +71,17 @@ def construct_matrices(path: str):
             # Process data here
             #
             ape = data["results"]["ate_rmse_meters"]
-            rpe = []
-            for delta in range(100, 801, 100):
-                relative_drift = (
-                    100 * data["rpe_details"][f"{delta}m"]["rmse_meters"] / delta
-                )
-                rpe.append(relative_drift)
-            rpe = np.mean(rpe)
+            try:
+                rpe = []
+                for delta in range(100, 801, 100):
+                    relative_drift = (
+                        100 * data["rpe_details"][f"{delta}m"]["rmse_meters"] / delta
+                    )
+                    rpe.append(relative_drift)
+                rpe = np.mean(rpe)
+            except KeyError:
+                print(f"KeyError: rpe_details not found in {f}")
+                rpe = np.nan
             map_idx = unique_map_name_index_map[map_traj]
             loc_idx = unique_loc_name_index_map[loc_traj]
             # Update the matrices
