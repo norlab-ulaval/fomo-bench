@@ -130,7 +130,7 @@ start_slam_services() {
     $DOCKER_COMPOSE_CMD up -d run_slam record_odometry run_foxglove
 
     info "Verifying that background services are running..."
-    sleep 5 # Give services a moment to start or fail. Adjust if your SLAM system takes longer to initialize.
+    sleep 10 # Give services a moment to start or fail. Adjust if your SLAM system takes longer to initialize.
 
     # Specifically check the 'run_slam' service, as it's the most likely to fail.
     # We get a list of services with status "running" and check if run_slam is in it.
