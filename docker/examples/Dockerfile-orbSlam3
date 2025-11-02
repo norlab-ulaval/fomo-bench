@@ -28,7 +28,7 @@ RUN git clone --recursive https://github.com/stevenlovegrove/Pangolin.git && \
 
 # Clone ORB_SLAM3 source
 WORKDIR /opt
-RUN git clone git@github.com:norlab-ulaval/ORB-SLAM3-STEREO-FIXED.git ORB_SLAM3 && \
+RUN git clone https://github.com/norlab-ulaval/ORB-SLAM3-STEREO-FIXED.git ORB_SLAM3 && \
     cd ORB_SLAM3 && \
     git submodule update --init --recursive && \
     chmod +x build.sh && \
