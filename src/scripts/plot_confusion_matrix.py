@@ -1,8 +1,9 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import argparse
-import yaml
 import os
+
+import matplotlib.pyplot as plt
+import numpy as np
+import yaml
 
 
 def get_map_loc_key_from_file_name(file_name):
@@ -77,9 +78,14 @@ def construct_matrices(path: str):
         map_traj, loc_traj = get_traj_names_from_file_name(file_name)
         with open(os.path.join(path, file_name), "r") as file:
             data = yaml.safe_load(file)
-            # Process data here
-            #
-            ape = data["results"]["ate_rmse_meters"]
+            try:
+                ape = data["results"]["ape_rmse_meters"]
+            except TypeError:
+                print(f"TypeError: ape_rmse_meters not found in {file_name}")
+                ape = np.nan
+            except KeyError:
+                print(f"KeyError: ape_rmse_meters not found in {file_name}")
+                ape = np.nan
             try:
                 rpe = []
                 for delta in range(100, 801, 100):
@@ -89,8 +95,8 @@ def construct_matrices(path: str):
                     rpe.append(relative_drift)
                 rpe = np.mean(rpe)
 
-            except KeyError:
-                print(f"KeyError: rpe_details not found in {file_name}")
+            except Exception as e:
+                print(f"Exception: {e} occurred in {file_name}")
                 rpe = np.nan
             map_idx = unique_map_name_index_map[map_traj]
             loc_idx = unique_loc_name_index_map[loc_traj]
@@ -171,7 +177,7 @@ def main_conf_matrix(base_path, slam):
 
     # Create the plot
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-    # Plot ATE confusion matrix
+    # Plot APE confusion matrix
     plot_confusion_matrix(
         ape_matrix, labels_maps, labels_locs, "APE Confusion Matrix", ax1, cmap="Reds"
     )
