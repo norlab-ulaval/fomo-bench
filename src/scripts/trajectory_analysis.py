@@ -89,7 +89,7 @@ def kabsch_algorithm(traj1, traj2) -> tuple[np.ndarray, np.ndarray]:
     traj2_centered = traj2 - traj2[0]
 
     target_len = int(0.25 * traj1_centered.shape[0])
-    print(f"Using first {target_len} points for alingment")
+    print(f"Using first {target_len} points for alignment")
 
     # Use points 1 onward for rotation alignment (skip first point which is fixed)
     P = traj1_centered[1:target_len].T  # 3 x (n-1) - target points
@@ -188,7 +188,7 @@ def process_trajectories(gt_file: str, est_file: str, alignment: str):
 # =============================================================================
 def compute_ape(traj_pair):
     """
-    Compute Absolute Pose Error (APE) using the translation part.
+    Compute Absolute Pose Error (APE) using the translation part (equal to point distance).
     """
     pose_relation = metrics.PoseRelation.translation_part
     ape_metric = metrics.APE(pose_relation)
@@ -203,10 +203,22 @@ def compute_rpe_for_delta(traj_pair, delta_meters):
     Compute Relative Pose Error (RPE) for a given delta (in meters).
     Returns the computed statistics or None if processing fails.
     """
+    pose_relation = metrics.PoseRelation.point_distance
+    delta_unit = metrics.Unit.meters
+    rpe_metric = metrics.RPE(pose_relation, delta_meters, delta_unit, all_pairs=True)
+    print(f"------{delta_meters}--------")
+    try:
+        rpe_metric.process_data(traj_pair)
+    except Exception as e:
+        print(f"Error processing RPE for delta {delta_meters}: {e}")
+        return None
+    print("Point distance")
+    print(rpe_metric.get_all_statistics())
+    input()
+
     pose_relation = metrics.PoseRelation.translation_part
     delta_unit = metrics.Unit.meters
     rpe_metric = metrics.RPE(pose_relation, delta_meters, delta_unit, all_pairs=True)
-
     try:
         rpe_metric.process_data(traj_pair)
     except Exception as e:
@@ -262,7 +274,7 @@ def compute_ate_rmse(rpe_results):
     return float(np.sqrt(np.mean(np.square(rmse_values))))
 
 
-def export_results_to_yaml(filename, avg_relative_rpe, ate_rmse, rpe_results):
+def export_results_to_yaml(filename, avg_relative_rpe, ape_rmse, rpe_results):
     """
     Save the computed metrics (average RPE and ATE RMSE along with detailed RPE stats) to a YAML file.
     """
@@ -277,8 +289,8 @@ def export_results_to_yaml(filename, avg_relative_rpe, ate_rmse, rpe_results):
     }
     data = {
         "results": {
+            "ape_rmse_meters": ape_rmse,
             "rpe_avg_rmse_percentage": avg_relative_rpe,
-            "ate_rmse_meters": ate_rmse,
         },
         "rpe_details": rpe_details,
     }
@@ -416,7 +428,7 @@ def plot_trajectory_3d(ax, traj_ref, traj_est):
 
 
 def plot_summary_table(
-    ax, avg_relative_rpe, ate_rmse, mapping_date: str, localization_date: str, slam: str
+    ax, avg_relative_rpe, ape_rmse, mapping_date: str, localization_date: str, slam: str
 ):
     """
     Plot a summary table of the computed metrics.
@@ -428,8 +440,8 @@ def plot_summary_table(
         fontsize=12,
         fontweight="bold",
     )
-    table_data = [[f"{avg_relative_rpe:.2f} %", f"{ate_rmse:.3f} m"]]
-    col_labels = ["AVG RMSE RPE (%)", "ATE RMSE (m)"]
+    table_data = [[f"{ape_rmse:.3f} m", f"{avg_relative_rpe:.2f} %"]]
+    col_labels = ["APE RMSE (m)", "AVG RMSE RPE (%)"]
     table = ax.table(
         cellText=table_data, colLabels=col_labels, loc="center", cellLoc="center"
     )
@@ -459,7 +471,7 @@ def create_figure(
     traj_est,
     rpe_table,
     avg_relative_rpe,
-    ate_rmse,
+    ape_rmse,
     save_path,
     mapping_date: str,
     localization_date: str,
@@ -477,7 +489,7 @@ def create_figure(
 
     # Summary Table
     plot_summary_table(
-        axs[0, 0], avg_relative_rpe, ate_rmse, mapping_date, localization_date, slam
+        axs[0, 0], avg_relative_rpe, ape_rmse, mapping_date, localization_date, slam
     )
 
     # RPE Details Table
@@ -532,7 +544,7 @@ if __name__ == "__main__":
         args.output,
         f"{args.mapping_date}_{args.localization_date}_trajectory_analysis.yaml",
     )
-    export_results_to_yaml(yaml_filename, avg_relative_rpe, ate_rmse, rpe_results)
+    export_results_to_yaml(yaml_filename, avg_relative_rpe, ape_rmse, rpe_results)
 
     analysis_filename = os.path.join(
         args.output, f"{args.mapping_date}_{args.localization_date}_trajectory_analysis"
@@ -542,7 +554,7 @@ if __name__ == "__main__":
         traj_pair[1],
         rpe_table,
         avg_relative_rpe,
-        ate_rmse,
+        ape_rmse,
         analysis_filename,
         args.mapping_date,
         args.localization_date,
