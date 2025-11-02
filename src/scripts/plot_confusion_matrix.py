@@ -5,6 +5,13 @@ import yaml
 import os
 
 
+def get_map_loc_key_from_file_name(file_name):
+    """
+    yellow_2024-11-21-14-26_yellow_2025-10-14-14-47_trajectory_analysis.yaml
+    """
+    return file_name.split("_")[1][:10], file_name.split("_")[3][:10]
+
+
 def create_deployment_mapping():
     deployment_mapping = {
         "2024-11-21": "Nov21",
@@ -19,6 +26,8 @@ def create_deployment_mapping():
         "2025-06-26": "Jun",
         "2025-08-20": "Aug",
         "2025-09-24": "Sep",
+        "2025-10-14": "Oct",
+        "2025-11-03": "Nov03",
     }
     return deployment_mapping
 
@@ -44,8 +53,8 @@ def construct_matrices(path: str):
     yaml_files.sort()
     unique_map_names = []
     unique_loc_names = []
-    for f in yaml_files:
-        map_traj, loc_traj = get_traj_names_from_file_name(f)
+    for file_name in yaml_files:
+        map_traj, loc_traj = get_traj_names_from_file_name(file_name)
         unique_map_names.append(map_traj)
         unique_loc_names.append(loc_traj)
     unique_map_names = sorted(list(set(unique_map_names)))
@@ -54,19 +63,19 @@ def construct_matrices(path: str):
     number_of_deployments_map = len(unique_map_names)
     number_of_deployments_loc = len(unique_loc_names)
 
-    ape_matrix = np.zeros((number_of_deployments_map, number_of_deployments_loc))
-    rpe_matrix = np.zeros((number_of_deployments_map, number_of_deployments_loc))
+    ape_matrix = np.full((number_of_deployments_map, number_of_deployments_loc), np.nan)
+    rpe_matrix = np.full((number_of_deployments_map, number_of_deployments_loc), np.nan)
 
     unique_map_name_index_map = {name: i for i, name in enumerate(unique_map_names)}
     unique_loc_name_index_map = {name: i for i, name in enumerate(unique_loc_names)}
 
-    labels_maps = []
-    labels_locs = []
+    labels_maps = ["N/A" for _ in range(number_of_deployments_map)]
+    labels_locs = ["N/A" for _ in range(number_of_deployments_loc)]
     deployment_mapping = create_deployment_mapping()
 
-    for f in yaml_files:
-        map_traj, loc_traj = get_traj_names_from_file_name(f)
-        with open(os.path.join(path, f), "r") as file:
+    for file_name in yaml_files:
+        map_traj, loc_traj = get_traj_names_from_file_name(file_name)
+        with open(os.path.join(path, file_name), "r") as file:
             data = yaml.safe_load(file)
             # Process data here
             #
@@ -79,8 +88,9 @@ def construct_matrices(path: str):
                     )
                     rpe.append(relative_drift)
                 rpe = np.mean(rpe)
+
             except KeyError:
-                print(f"KeyError: rpe_details not found in {f}")
+                print(f"KeyError: rpe_details not found in {file_name}")
                 rpe = np.nan
             map_idx = unique_map_name_index_map[map_traj]
             loc_idx = unique_loc_name_index_map[loc_traj]
@@ -88,19 +98,9 @@ def construct_matrices(path: str):
             ape_matrix[map_idx, loc_idx] = ape
             rpe_matrix[map_idx, loc_idx] = rpe
 
-            if len(labels_maps) < number_of_deployments_map:
-                for key in deployment_mapping.keys():
-                    if key in f:
-                        label = deployment_mapping[key]
-                        if label not in labels_maps:
-                            labels_maps.append(label)
-
-            if len(labels_locs) < number_of_deployments_loc:
-                for key in deployment_mapping.keys():
-                    if key in f:
-                        label = deployment_mapping[key]
-                        if label not in labels_locs:
-                            labels_locs.append(label)
+            key_map, key_loc = get_map_loc_key_from_file_name(file_name)
+            labels_maps[map_idx] = deployment_mapping[key_map]
+            labels_locs[loc_idx] = deployment_mapping[key_loc]
 
     return ape_matrix, rpe_matrix, labels_maps, labels_locs
 
@@ -166,9 +166,7 @@ def plot_confusion_matrix(matrix, labels_maps, labels_locs, title, ax, cmap="Red
     ax.grid(which="minor", color="white", linestyle="-", linewidth=2)
 
 
-if __name__ == "__main__":
-    args = parse_arguments()
-    base_path = args.path
+def main_conf_matrix(base_path, slam):
     ape_matrix, rpe_matrix, labels_maps, labels_locs = construct_matrices(base_path)
 
     # Create the plot
@@ -188,7 +186,7 @@ if __name__ == "__main__":
         cmap="Blues",
     )
 
-    plt.suptitle(f"Evaluation {args.slam}", fontsize=16, fontweight="bold")
+    plt.suptitle(f"Evaluation {slam}", fontsize=16, fontweight="bold")
 
     # Adjust layout
     plt.tight_layout()
@@ -201,3 +199,8 @@ if __name__ == "__main__":
     plt.show()
 
     print("Confusion matrices plotted successfully!")
+
+
+if __name__ == "__main__":
+    args = parse_arguments()
+    main_conf_matrix(args.path, args.slam)
