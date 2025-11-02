@@ -1,16 +1,16 @@
-import os
-import copy
-import sys
-import yaml
 import argparse
-import numpy as np
-import matplotlib.pyplot as plt
+import copy
+import os
+import sys
 
-from evo.tools import file_interface
-from evo.core import sync, metrics
 import evo.core.geometry as geometry
-from evo.core.trajectory import PoseTrajectory3D
+import matplotlib.pyplot as plt
+import numpy as np
+import yaml
 from evo.core import lie_algebra as lie
+from evo.core import metrics, sync
+from evo.core.trajectory import PoseTrajectory3D
+from evo.tools import file_interface
 
 
 # =============================================================================
@@ -158,17 +158,17 @@ def set_identity_orientations(traj):
 def process_trajectories(gt_file: str, est_file: str, alignment: str):
     if not os.path.exists(gt_file):
         print(f"File {gt_file} does not exist (gt_file)")
-        exit(1)
+        raise FileNotFoundError(f"File {gt_file} does not exist")
     if not os.path.isfile(est_file):
         print(f"File {est_file} does not exist (est_file)")
-        exit(1)
+        raise FileNotFoundError(f"File {est_file} does not exist")
 
     try:
         traj_ref, traj_est = load_trajectories(gt_file, est_file)
     except Exception as e:
         print(f"Error loading trajectories: {e}")
         print(f"file paths: {gt_file} {est_file}")
-        exit(1)
+        raise e
 
     traj_ref_sync, traj_est_sync = synchronize_trajectories(traj_ref, traj_est)
     traj_ref_aligned, traj_est_aligned = align_trajectories(
