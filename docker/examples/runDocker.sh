@@ -1,0 +1,21 @@
+docker run -it \
+  --name slam_benchmark_nvidia_container \
+  -it \
+  --rm \
+  --platform linux/amd64 \
+  --privileged \
+  --network host \
+  --runtime nvidia \
+  --gpus all \
+  -e DISPLAY=${DISPLAY} \
+  -e NVIDIA_VISIBLE_DEVICES=all \
+  -e NVIDIA_DRIVER_CAPABILITIES=all \
+  -e QT_X11_NO_MITSHM=1 \
+  -e SSH_AUTH_SOCK=${SSH_AUTH_SOCK} \
+  -v /dev:/dev \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  -v ./ros_slam_benchmark/workspaces/nvidia_vslam/nvidia_vslam_launchers:/home/robot/colcon_ws/src/nvidia_vslam_launchers \
+  -v ./ros_slam_benchmark/configs:/home/robot/colcon_ws/src/nvidia_vslam_launchers/configs \
+  -v ./ros_slam_benchmark/results:/home/robot/results \
+  -v /media/kamyar/local_nas/FOMO/vslam_data/2024-11-21/red_2024-11-21-10-34:/home/robot/data \
+  norlab/pycuvslam /bin/bash
