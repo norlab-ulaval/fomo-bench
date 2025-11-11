@@ -30,12 +30,11 @@ else:
 def generate_launch_description() -> LaunchDescription:
     ld = LaunchDescription()
 
-    share_folder = get_package_share_directory("nvidia_vslam_launchers")
+    share_folder = get_package_share_directory("ros_launchers")
     default_params_file = os.path.join(
         share_folder,
-        "configs",
-        "nvidia_vslam",
-        "nvidia_vslam_params.yaml",
+        "config",
+        "_pycuvslam.yaml",
     )
 
     params_file_arg = DeclareLaunchArgument(

@@ -1,0 +1,50 @@
+visual_slam_node:
+  topics:
+    input_images_0: /zedx/left/image_rect_mono
+    input_camera_info_0: /zedx/left/camera_info
+    input_images_1: /zedx/right/image_rect_mono
+    input_camera_info_1: /zedx/right/camera_info
+    input_imu: /vectornav/data_unbiased # Uncomment if IMU fusion is enabled
+
+  ros__parameters:
+    # Image processing and inputs
+    enable_image_denoising: false
+    rectified_images: true
+
+    # Visualization options
+    enable_slam_visualization: true
+    enable_landmarks_view: true
+    enable_observations_view: true
+
+    # Frames and topology
+    camera_optical_frames:
+      - zedx_left
+      - zedx_right
+    base_frame: base_link
+    map_frame: map
+    odom_frame: odom
+    num_cameras: 2
+
+    # sync_matching_threshold_ms: 100.0
+    image_jitter_threshold_ms: 101.0
+    enable_ground_constraint_in_odometry: false
+    enable_ground_constraint_in_slam: false
+    enable_localization_n_mapping: true
+
+    override_publishing_stamp: true
+    publish_map_to_odom_tf: true
+    publish_odom_to_base_tf: true
+
+    # IMU fusion (disabled by default)
+    enable_imu_fusion: false
+    imu_frame: vectornav
+
+    # IMU noise parameters (need to change values according to the specific IMU used)
+    gyro_noise_density: 6.170024194584988e-05
+    gyro_random_walk: 1.2754866476100412e-06
+    accel_noise_density: 0.0014475547298752243
+    accel_random_walk: 1.743080431796351e-05
+
+    # Calibration and timing
+    calibration_frequency: 200.0
+    verbosity: 1
