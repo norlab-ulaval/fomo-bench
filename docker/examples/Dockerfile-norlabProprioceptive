@@ -32,6 +32,8 @@ RUN mkdir -p /ros2_ws/src
 
 RUN git clone https://github.com/norlab-ulaval/imu_tools.git -b fomo /ros2_ws/src/imu_tools
 RUN git clone https://github.com/norlab-ulaval/norlab_imu_tools.git -b fomo /ros2_ws/src/norlab_imu_tools
+RUN git clone https://github.com/norlab-ulaval/fomo-bench.git /tmp/fomo-bench \
+    && mv /tmp/fomo-bench/ros_launchers /ros2_ws/src/ros_launchers
 
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
 RUN rosdep update
