@@ -1,0 +1,71 @@
+FROM nvcr.io/nvidia/isaac/ros:x86_64-ros2_humble_f8edad8d48e9aa1b5b240c2374c55d60
+
+ARG USER=robot
+ARG UID=1000
+ARG GID=1000
+ENV USER=${USER} UID=${UID} GID=${GID}
+ENV ROS_DISTRO=humble
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Fix repository Origin/Label change
+RUN echo 'Acquire::AllowReleaseInfoChange::Origin "true";' > /etc/apt/apt.conf.d/99allow-release-info-change && \
+    echo 'Acquire::AllowReleaseInfoChange::Label "true";' >> /etc/apt/apt.conf.d/99allow-release-info-change
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    desktop-file-utils \
+    gnupg \
+    lsb-release \
+    software-properties-common \
+    build-essential \
+    cmake \
+    git \
+    sudo \
+    locales \
+    ssh \
+    htop \
+    mesa-utils \
+    psmisc
+
+RUN EXISTING_USER=$(getent passwd 1000 | cut -d: -f1) \
+    && if [ -n "$EXISTING_USER" ] && [ "$EXISTING_USER" != "robot" ]; then \
+         usermod -l robot "$EXISTING_USER" \
+         && groupmod -n robot "$EXISTING_USER" \
+         && usermod -d /home/robot -m robot; \
+       fi
+
+# Make sure user can use sudo
+RUN adduser $USER sudo
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/nopasswd && chmod 0440 /etc/sudoers.d/nopasswd
+
+# Install additional ROS packages
+RUN apt-get update \
+    && apt-get install -y \
+    ros-${ROS_DISTRO}-ament-cmake \
+    ros-${ROS_DISTRO}-ament-index-cpp \
+    ros-${ROS_DISTRO}-foxglove-bridge \
+    ros-${ROS_DISTRO}-rqt-graph \
+    ros-${ROS_DISTRO}-rqt-tf-tree \
+    ros-${ROS_DISTRO}-xacro \
+    ros-${ROS_DISTRO}-rosbag2-storage-mcap \
+    ros-${ROS_DISTRO}-robot-localization \
+    ros-${ROS_DISTRO}-isaac-ros-visual-slam
+
+USER $USER
+WORKDIR /home/$USER
+
+RUN mkdir -p /home/$USER/ros2_ws/src
+COPY ros_slam_benchmark/workspaces/nvidia_vslam/nvidia_vslam_launchers /home/$USER/ros2_ws/src/nvidia_vslam_launchers
+COPY ros_slam_benchmark/configs /home/$USER/ros2_ws/src/nvidia_vslam_launchers/configs
+RUN git clone https://github.com/norlab-ulaval/norlab_imu_tools.git -b fomo /home/$USER/ros2_ws/src/norlab_imu_tools
+
+RUN cd /home/$USER/ros2_ws/ \
+    && source /opt/ros/${ROS_DISTRO}/setup.bash \
+    && ros2 build --symlink-install
+
+RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /home/$USER/.bashrc
+RUN echo "source /home/$USER/ros2_ws/install/setup.bash" >> /home/$USER/.bashrc
+
+STOPSIGNAL SIGINT
+
+CMD ["/bin/bash", "-c", "cd /data && source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && ros2 launch --noninteractive nvidia_vslam_launchers nvidia_vslam_launchers.launch.py"]
