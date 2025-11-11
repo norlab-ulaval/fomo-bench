@@ -4,7 +4,6 @@ ARG USER=robot
 ARG UID=1000
 ARG GID=1000
 ENV USER=${USER} UID=${UID} GID=${GID}
-ENV ROS_DISTRO=humble
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Fix repository Origin/Label change
@@ -41,15 +40,15 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/nopasswd && chmod 0440 
 # Install additional ROS packages
 RUN apt-get update \
     && apt-get install -y \
-    ros-${ROS_DISTRO}-ament-cmake \
-    ros-${ROS_DISTRO}-ament-index-cpp \
-    ros-${ROS_DISTRO}-foxglove-bridge \
-    ros-${ROS_DISTRO}-rqt-graph \
-    ros-${ROS_DISTRO}-rqt-tf-tree \
-    ros-${ROS_DISTRO}-xacro \
-    ros-${ROS_DISTRO}-rosbag2-storage-mcap \
-    ros-${ROS_DISTRO}-robot-localization \
-    ros-${ROS_DISTRO}-isaac-ros-visual-slam
+    ros-humble-ament-cmake \
+    ros-humble-ament-index-cpp \
+    ros-humble-foxglove-bridge \
+    ros-humble-rqt-graph \
+    ros-humble-rqt-tf-tree \
+    ros-humble-xacro \
+    ros-humble-rosbag2-storage-mcap \
+    ros-humble-robot-localization \
+    ros-humble-isaac-ros-visual-slam
 
 USER $USER
 WORKDIR /home/$USER
@@ -58,9 +57,15 @@ RUN mkdir -p /home/$USER/ros2_ws/src
 COPY ros_slam_benchmark/workspaces/nvidia_vslam/nvidia_vslam_launchers /home/$USER/ros2_ws/src/nvidia_vslam_launchers
 COPY ros_slam_benchmark/configs /home/$USER/ros2_ws/src/nvidia_vslam_launchers/configs
 RUN git clone https://github.com/norlab-ulaval/norlab_imu_tools.git -b fomo /home/$USER/ros2_ws/src/norlab_imu_tools
+RUN git clone https://github.com/norlab-ulaval/fomo-bench.git /tmp/fomo-bench \
+    && mv /tmp/fomo-bench/ros_launchers /home/$USER/ros2_ws/src/ros_launchers
 
+
+RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+RUN rosdep update
+RUN rosdep install --from-paths /ros2_ws/src --ignore-src -r -y
 RUN cd /home/$USER/ros2_ws/ \
-    && source /opt/ros/${ROS_DISTRO}/setup.bash \
+    && source /opt/ros/humble/setup.bash \
     && ros2 build --symlink-install
 
 RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /home/$USER/.bashrc
