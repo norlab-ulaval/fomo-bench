@@ -71,4 +71,4 @@ RUN . /opt/ros/humble/setup.sh && cd /ros2_ws && ros2 build --symlink-install
 WORKDIR /
 STOPSIGNAL SIGINT
 
-CMD ["/bin/bash", "-c", "cd /data && source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && ros2 launch --noninteractive orbslam3 orb-slam3-imu.launch.py"]
+CMD ["/bin/bash", "-c", "cd /data && source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && ros2 launch --noninteractive ros_launchers orbSlam3.launch.py"]

@@ -73,4 +73,4 @@ RUN echo "source /home/$USER/ros2_ws/install/setup.bash" >> /home/$USER/.bashrc
 
 STOPSIGNAL SIGINT
 
-CMD ["/bin/bash", "-c", "cd /data && source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && ros2 launch --noninteractive nvidia_vslam_launchers nvidia_vslam_launchers.launch.py"]
+CMD ["/bin/bash", "-c", "cd /data && source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && ros2 launch --noninteractive ros_launchers PyCuVSLAM.launch.py"]
