@@ -20,6 +20,7 @@ RUN apt clean\
     libomp-dev libboost-all-dev libeigen3-dev libyaml-cpp-dev \
     python3-pip \
     curl gnupg lsb-release \
+    ros-humble-robot-localization \
     && apt clean
 
 WORKDIR /
