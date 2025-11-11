@@ -31,16 +31,10 @@ def generate_launch_description() -> LaunchDescription:
     ld = LaunchDescription()
 
     share_folder = get_package_share_directory("ros_launchers")
-    default_params_file = os.path.join(
+    params_file = os.path.join(
         share_folder,
         "config",
         "_pycuvslam.yaml",
-    )
-
-    params_file_arg = DeclareLaunchArgument(
-        "params_file",
-        default_value=default_params_file,
-        description="Path to the YAML file with parameters for VisualSlamNode",
     )
 
     launch_folder = os.path.join(share_folder, "launch")
@@ -85,7 +79,7 @@ def generate_launch_description() -> LaunchDescription:
         package="isaac_ros_visual_slam",
         plugin="nvidia::isaac_ros::visual_slam::VisualSlamNode",
         parameters=[
-            LaunchConfiguration("params_file"),
+            params_file,
             {
                 "save_map_folder_path": output_map_name,
                 "load_map_folder_path": input_map_name,
@@ -132,7 +126,6 @@ def generate_launch_description() -> LaunchDescription:
         ],
     )
 
-    ld.add_action(params_file_arg)
     ld.add_action(container)
 
     return ld
