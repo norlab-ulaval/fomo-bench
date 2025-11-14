@@ -71,8 +71,8 @@ def generate_launch_description():
         executable="stereo-inertial",
         name="orbslam3_stereo",
         output="screen",
-        sigterm_timeout="30",  # Wait 30 seconds before escalating to SIGTERM
-        sigkill_timeout="5",  # Wait 5 more seconds before SIGKILL
+        sigterm_timeout="60",  # Wait 30 seconds before escalating to SIGTERM
+        sigkill_timeout="10",  # Wait 5 more seconds before SIGKILL
         arguments=[
             "--ros-args",
             "--log-level",
