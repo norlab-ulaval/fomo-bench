@@ -66,8 +66,8 @@ def generate_launch_description():
         executable="mapper_node",
         name="mapper_node",
         output="screen",
-        sigterm_timeout="30",  # Wait 30 seconds before escalating to SIGTERM
-        sigkill_timeout="5",  # Wait 5 more seconds before SIGKILL
+        sigterm_timeout="60",  # Wait 30 seconds before escalating to SIGTERM
+        sigkill_timeout="10",  # Wait 5 more seconds before SIGKILL
         arguments=[
             "--ros-args",
             "--log-level",
