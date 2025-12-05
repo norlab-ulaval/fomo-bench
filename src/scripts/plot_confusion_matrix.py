@@ -45,7 +45,7 @@ def parse_arguments():
 
 
 def get_traj_names_from_file_name(file_name):
-    return file_name.split("_")[1], file_name.split("_")[3]
+    return file_name.split("_")[1], file_name.split("_")[3].split(".")[0]
 
 
 def construct_matrices(path: str):

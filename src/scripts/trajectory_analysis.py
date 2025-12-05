@@ -11,6 +11,7 @@ from evo.core import lie_algebra as lie
 from evo.core import metrics, sync
 from evo.core.trajectory import PoseTrajectory3D
 from evo.tools import file_interface
+from pandas.core.ops.array_ops import is_scalar
 
 
 # =============================================================================
@@ -43,9 +44,6 @@ def parse_arguments():
         "--output", default="/evaluation_output", help="Directory to store output files"
     )
     parser.add_argument(
-        "--test", action="store_true", help="Use test mode with smaller RPE deltas"
-    )
-    parser.add_argument(
         "--zero",
         action="store_true",
         help="Transform the trajectories to start at the origin",
@@ -66,7 +64,7 @@ def load_trajectories(gt_file, est_file):
     return traj_ref, traj_est
 
 
-def kabsch_algorithm(traj1, traj2) -> tuple[np.ndarray, np.ndarray]:
+def kabsch_algorithm(traj1, traj2) -> tuple[int, np.ndarray, np.ndarray]:
     """
     Modified Kabsch algorithm that fixes first points and finds optimal rotation.
 
@@ -91,9 +89,8 @@ def kabsch_algorithm(traj1, traj2) -> tuple[np.ndarray, np.ndarray]:
     target_len = int(0.25 * traj1_centered.shape[0])
     print(f"Using first {target_len} points for alignment")
 
-    # Use points 1 onward for rotation alignment (skip first point which is fixed)
-    P = traj1_centered[1:target_len].T  # 3 x (n-1) - target points
-    Q = traj2_centered[1:target_len].T  # 3 x (n-1) - points to rotate
+    P = traj1_centered[0:target_len].T  # 3 x (n-1) - target points
+    Q = traj2_centered[0:target_len].T  # 3 x (n-1) - points to rotate
 
     # Compute cross-covariance matrix
     H = Q @ P.T
@@ -109,7 +106,7 @@ def kabsch_algorithm(traj1, traj2) -> tuple[np.ndarray, np.ndarray]:
         Vt[-1, :] *= -1
         r_a = Vt.T @ U.T
 
-    return r_a, t_a
+    return target_len, r_a, t_a
 
 
 # =============================================================================
@@ -119,9 +116,14 @@ def synchronize_trajectories(traj_ref, traj_est, max_diff=0.05):
     return sync.associate_trajectories(traj_ref, traj_est, max_diff)
 
 
+def move_trajectories_to_origin(traj_ref: PoseTrajectory3D, traj_est: PoseTrajectory3D):
+    traj_ref.transform(lie.se3(t=-traj_ref.positions_xyz[0]))
+    traj_est.transform(lie.se3(t=-traj_est.positions_xyz[0]))
+
+
 def align_trajectories(
     traj_ref_sync: PoseTrajectory3D, traj_est_sync: PoseTrajectory3D, alignment: str
-) -> tuple[PoseTrajectory3D, PoseTrajectory3D]:
+) -> tuple[int, PoseTrajectory3D, PoseTrajectory3D]:
     traj_ref_aligned = copy.deepcopy(traj_ref_sync)
     traj_est_aligned = copy.deepcopy(traj_est_sync)
 
@@ -129,19 +131,22 @@ def align_trajectories(
         traj_est_aligned.align(
             traj_ref_aligned, correct_scale=False, correct_only_scale=False, n=1000
         )
+        num_used_poses = 1000
     elif alignment == "full":
         traj_est_aligned.align(
             traj_ref_aligned, correct_scale=False, correct_only_scale=False, n=-1
         )
+        num_used_poses = traj_ref_aligned.num_poses
     elif alignment == "kabsch":
-        r_a, t_a = kabsch_algorithm(
+        num_used_poses, r_a, t_a = kabsch_algorithm(
             traj_ref_aligned.positions_xyz, traj_est_aligned.positions_xyz
         )
         traj_est_aligned.transform(lie.se3(r_a, t_a))
+
     else:
         raise ValueError("Invalid alignment type")
 
-    return traj_ref_aligned, traj_est_aligned
+    return num_used_poses, traj_ref_aligned, traj_est_aligned
 
 
 def set_identity_orientations(traj):
@@ -155,7 +160,94 @@ def set_identity_orientations(traj):
     )
 
 
-def process_trajectories(gt_file: str, est_file: str, alignment: str):
+def plot_trajs(traj_ref_aligned, traj_est_aligned, num_used_poses):
+    fig, axs = plt.subplots(nrows=5)
+    axs[0].plot(
+        traj_ref_aligned.timestamps[:num_used_poses],
+        traj_ref_aligned.positions_xyz[:num_used_poses, 0],
+        color="blue",
+    )
+    axs[0].plot(
+        traj_est_aligned.timestamps[:num_used_poses],
+        traj_est_aligned.positions_xyz[:num_used_poses, 0],
+        color="orange",
+    )
+    axs[0].plot(
+        traj_ref_aligned.timestamps[num_used_poses:],
+        traj_ref_aligned.positions_xyz[num_used_poses:, 0],
+        color="blue",
+        linestyle="--",
+    )
+    axs[0].plot(
+        traj_est_aligned.timestamps[num_used_poses:],
+        traj_est_aligned.positions_xyz[num_used_poses:, 0],
+        color="orange",
+        linestyle="--",
+    )
+    axs[0].legend(["Reference", "Estimated"])
+    axs[1].plot(
+        traj_ref_aligned.timestamps[:num_used_poses],
+        traj_ref_aligned.positions_xyz[:num_used_poses, 1],
+        color="blue",
+    )
+    axs[1].plot(
+        traj_est_aligned.timestamps[:num_used_poses],
+        traj_est_aligned.positions_xyz[:num_used_poses, 1],
+        color="orange",
+    )
+    axs[1].plot(
+        traj_ref_aligned.timestamps[num_used_poses:],
+        traj_ref_aligned.positions_xyz[num_used_poses:, 1],
+        color="blue",
+        linestyle="--",
+    )
+    axs[1].plot(
+        traj_est_aligned.timestamps[num_used_poses:],
+        traj_est_aligned.positions_xyz[num_used_poses:, 1],
+        color="orange",
+        linestyle="--",
+    )
+    axs[2].plot(
+        traj_ref_aligned.timestamps[:num_used_poses],
+        traj_ref_aligned.positions_xyz[:num_used_poses, 2],
+        color="blue",
+    )
+    axs[2].plot(
+        traj_est_aligned.timestamps[:num_used_poses],
+        traj_est_aligned.positions_xyz[:num_used_poses, 2],
+        color="orange",
+    )
+    axs[2].plot(
+        traj_ref_aligned.timestamps[num_used_poses:],
+        traj_ref_aligned.positions_xyz[num_used_poses:, 2],
+        color="blue",
+        linestyle="--",
+    )
+    axs[2].plot(
+        traj_est_aligned.timestamps[num_used_poses:],
+        traj_est_aligned.positions_xyz[num_used_poses:, 2],
+        color="orange",
+        linestyle="--",
+    )
+
+    axs[3].plot(
+        traj_ref_aligned.positions_xyz[:, 0],
+        traj_ref_aligned.positions_xyz[:, 1],
+        color="blue",
+        linestyle="--",
+    )
+    axs[4].plot(
+        traj_est_aligned.positions_xyz[:, 0],
+        traj_est_aligned.positions_xyz[:, 1],
+        color="orange",
+        linestyle="--",
+    )
+    plt.show()
+
+
+def process_trajectories(
+    gt_file: str, est_file: str, alignment: str
+) -> tuple[PoseTrajectory3D, PoseTrajectory3D, dict[str, float]]:
     if not os.path.exists(gt_file):
         print(f"File {gt_file} does not exist (gt_file)")
         raise FileNotFoundError(f"File {gt_file} does not exist")
@@ -170,17 +262,49 @@ def process_trajectories(gt_file: str, est_file: str, alignment: str):
         print(f"file paths: {gt_file} {est_file}")
         raise e
 
+    trajectories = {
+        "ref": {
+            "length": traj_ref.path_length,
+            "size": traj_ref.num_poses,
+            "start": float(traj_ref.timestamps[0]),
+            "end": float(traj_ref.timestamps[-1]),
+        },
+        "est": {
+            "length": traj_est.path_length,
+            "size": traj_est.num_poses,
+            "start": float(traj_est.timestamps[0]),
+            "end": float(traj_est.timestamps[-1]),
+        },
+        "length_diff": traj_ref.path_length - traj_est.path_length,
+        "shortened": False,
+    }
+
     traj_ref_sync, traj_est_sync = synchronize_trajectories(traj_ref, traj_est)
-    traj_ref_aligned, traj_est_aligned = align_trajectories(
+
+    if traj_ref_sync.path_length < traj_ref.path_length * 0.9:
+        print(
+            "Reference trajectory got shorten in the synchronization process. Labeling estimate."
+        )
+        trajectories["est"] = {
+            "length": traj_est_sync.path_length,
+            "size": traj_est_sync.num_poses,
+            "start": float(traj_est_sync.timestamps[0]),
+            "end": float(traj_est_sync.timestamps[-1]),
+        }
+        trajectories["length_diff"] = traj_ref.path_length - traj_est_sync.path_length
+        trajectories["shortened"] = True
+    move_trajectories_to_origin(traj_ref_sync, traj_est_sync)
+    num_used_poses, traj_ref_aligned, traj_est_aligned = align_trajectories(
         traj_ref_sync, traj_est_sync, alignment
     )
 
-    # traj_ref_final = set_identity_orientations(traj_ref_aligned)
-    # traj_est_final = set_identity_orientations(traj_est_aligned)
-    traj_ref_final = traj_ref_aligned
-    traj_est_final = traj_est_aligned
+    # plot_trajs(traj_ref, traj_est, num_used_poses)
+    # plot_trajs(traj_ref_aligned, traj_est_aligned, num_used_poses)
 
-    return traj_ref_final, traj_est_final
+    traj_ref_final = set_identity_orientations(traj_ref_aligned)
+    traj_est_final = set_identity_orientations(traj_est_aligned)
+
+    return traj_ref_final, traj_est_final, trajectories
 
 
 # =============================================================================
@@ -206,15 +330,11 @@ def compute_rpe_for_delta(traj_pair, delta_meters):
     pose_relation = metrics.PoseRelation.point_distance
     delta_unit = metrics.Unit.meters
     rpe_metric = metrics.RPE(pose_relation, delta_meters, delta_unit, all_pairs=True)
-    print(f"------{delta_meters}--------")
     try:
         rpe_metric.process_data(traj_pair)
     except Exception as e:
         print(f"Error processing RPE for delta {delta_meters}: {e}")
         return None
-    print("Point distance")
-    print(rpe_metric.get_all_statistics())
-    input()
 
     pose_relation = metrics.PoseRelation.translation_part
     delta_unit = metrics.Unit.meters
@@ -274,7 +394,9 @@ def compute_ate_rmse(rpe_results):
     return float(np.sqrt(np.mean(np.square(rmse_values))))
 
 
-def export_results_to_yaml(filename, avg_relative_rpe, ape_rmse, rpe_results):
+def export_results_to_yaml(
+    filename, avg_relative_rpe, ape_rmse, rpe_results, trajectories
+):
     """
     Save the computed metrics (average RPE and ATE RMSE along with detailed RPE stats) to a YAML file.
     """
@@ -293,6 +415,7 @@ def export_results_to_yaml(filename, avg_relative_rpe, ape_rmse, rpe_results):
             "rpe_avg_rmse_percentage": avg_relative_rpe,
         },
         "rpe_details": rpe_details,
+        "trajectories": trajectories,
     }
     with open(filename, "w") as file:
         yaml.dump(data, file)
@@ -343,8 +466,8 @@ def plot_trajectory_xy(ax, traj_ref, traj_est, is_zeroed: bool):
     if is_zeroed:
         x_ref -= x_ref[0]
         y_ref -= y_ref[0]
-        x_est -= x_est[0]
-        y_est -= y_est[0]
+        x_est -= x_ref[0]
+        y_est -= y_ref[0]
     ax.plot(
         x_ref,
         y_ref,
@@ -507,48 +630,39 @@ def create_figure(
     # plot_trajectory_3d(ax_3d, traj_ref, traj_est)
 
     plt.tight_layout()
-    plt.savefig(f"{save_path}.pdf", format="pdf", dpi=300)
     plt.savefig(f"{save_path}.jpg", format="jpg", dpi=300)
-    # plt.show()
     plt.close()
 
 
-# =============================================================================
-# Main Execution
-# =============================================================================
-if __name__ == "__main__":
-    args = parse_arguments()
-    os.makedirs(args.output, exist_ok=True)
+def evaluate(output, gt, est, alignment, mapping_date, localization_date, slam, zero):
+    os.makedirs(output, exist_ok=True)
 
-    traj_pair = process_trajectories(args.gt, args.est, args.alignment)
+    traj_gt, traj_est, trajectories = process_trajectories(gt, est, alignment)
+    traj_pair = (traj_gt, traj_est)
 
     ape_rmse, ape_stats = compute_ape(traj_pair)
 
-    TEST_DELTAS = [1, 2, 5, 10, 20, 50, 100]
-    EVALUAITON_DELTAS = [5, 100, 200, 300, 400, 500, 600, 700, 800]
-    DELTAS = TEST_DELTAS if args.test else EVALUAITON_DELTAS
+    EVALUATION_DELTAS = [5, 100, 200, 300, 400, 500, 600, 700, 800]
 
-    rpe_results = compute_rpe_set(traj_pair, DELTAS)
+    rpe_results = compute_rpe_set(traj_pair, EVALUATION_DELTAS)
 
     if len(rpe_results) == 0:
-        print(
-            "\033[91mToo big deltas! Try turning on test mode with --test\033[0m",
-            file=sys.stderr,
+        raise ValueError(
+            "\033[91mToo big deltas! Try turning on test mode with --test\033[0m"
         )
-        sys.exit(1)
 
     rpe_table, avg_relative_rpe = create_rpe_table(rpe_results)
     ate_rmse = compute_ate_rmse(rpe_results)
 
     yaml_filename = os.path.join(
-        args.output,
-        f"{args.mapping_date}_{args.localization_date}_trajectory_analysis.yaml",
+        output,
+        f"{mapping_date}_{localization_date}.yaml",
     )
-    export_results_to_yaml(yaml_filename, avg_relative_rpe, ape_rmse, rpe_results)
+    export_results_to_yaml(
+        yaml_filename, avg_relative_rpe, ape_rmse, rpe_results, trajectories
+    )
 
-    analysis_filename = os.path.join(
-        args.output, f"{args.mapping_date}_{args.localization_date}_trajectory_analysis"
-    )
+    analysis_filename = os.path.join(output, f"{mapping_date}_{localization_date}")
     create_figure(
         traj_pair[0],
         traj_pair[1],
@@ -556,6 +670,23 @@ if __name__ == "__main__":
         avg_relative_rpe,
         ape_rmse,
         analysis_filename,
+        mapping_date,
+        localization_date,
+        slam,
+        zero,
+    )
+
+
+# =============================================================================
+# Main Execution
+# =============================================================================
+if __name__ == "__main__":
+    args = parse_arguments()
+    evaluate(
+        args.output,
+        args.gt,
+        args.est,
+        args.alignment,
         args.mapping_date,
         args.localization_date,
         args.slam,
