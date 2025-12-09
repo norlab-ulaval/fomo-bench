@@ -13,8 +13,11 @@ RUN apt-get update && apt-get install -y \
     ros-humble-foxglove-bridge \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-RUN pip install numpy==1.24.4 scipy==1.10.1 matplotlib==3.4.2 evo
+# Install uv
+RUN pip install uv
+
+# Install FoMo SDK which includes all python dependencies
+RUN cd /opt && git clone https://github.com/norlab-ulaval/fomo-sdk.git && cd fomo-sdk && uv sync
 
 # Set up a standard working directory
 WORKDIR /app
