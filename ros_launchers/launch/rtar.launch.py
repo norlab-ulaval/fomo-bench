@@ -1,0 +1,76 @@
+import os
+import os.path as osp
+import json
+
+
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
+
+
+def generate_launch_description():
+    # config directory
+    config_dir = osp.join(get_package_share_directory("fomo_rtr_wrapper"), "config")
+
+    commonNodeArgs = {
+        "package": "vtr_navigation",
+        "namespace": "vtr",
+        "executable": "vtr_navigation",
+        "output": "screen",
+    }
+
+    INPUT_IMU_BIAS_FILE = os.path.join("/", "calib", "imu.json")
+    IMU_TYPE = "vectornav"  # or 'xsens'
+
+    bias_z = 0.0
+    if os.path.exists(INPUT_IMU_BIAS_FILE):
+        with open(INPUT_IMU_BIAS_FILE, "r") as f:
+            bias_data = json.load(f)
+            bias_z = bias_data[IMU_TYPE]["angular_velocity"]["z"]
+    print(f"Setting bias to {bias_z}")
+
+    return LaunchDescription(
+        [
+            DeclareLaunchArgument(
+                "base_params",
+                description="base parameter file (sensor, robot specific)",
+            ),
+            Node(
+                **commonNodeArgs,
+                parameters=[
+                    PathJoinSubstitution(
+                        (config_dir, LaunchConfiguration("base_params"))
+                    ),
+                    {
+                        "data_dir": "/data",
+                        "model_dir": "/data/models",
+                        "start_new_graph": int(os.getenv("IS_MAPPING")) == 1,
+                        "use_sim_time": True,
+                        "path_planning.type": "stationary",
+                        "gyro_bias.z": bias_z,
+                        "log_debug": False,
+                        "robot_frame": "base_link",
+                        "radar_frame": "navtech",
+                        "radar_topic": "/navtech/b_scan_msg",
+                        "gyro_frame": "vectornav",
+                        "gyro_topic": "/vectornav/data_raw",
+                        "log_enabled": [
+                            "mission.state_machine",
+                            "pose_graph",
+                        ],
+                    },
+                ],
+                remappings=[
+                    ("/vtr/odometry", "/estimated_odom"),
+                ],
+            ),
+            Node(
+                package="fomo_rtr_wrapper",
+                namespace="vtr",
+                executable="start_rtr_fomo",
+                output="screen",
+            ),
+        ]
+    )
