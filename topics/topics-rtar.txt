@@ -1,0 +1,2 @@
+/navtech/b_scan_msg
+/navtech/config_data
