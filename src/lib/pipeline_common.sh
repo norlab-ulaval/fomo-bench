@@ -185,7 +185,7 @@ eval_single_trajectory() {
     export CALIB_PATH_HOST=$1/calib
     export OUTPUT_FILE_NAME="${2}_${3}.txt" # name of the recorded odometry file
 
-    export REFERENCE_TRAJECTORY_FILE_HOST=$1/gt.csv
+    export REFERENCE_TRAJECTORY_FILE_HOST=$1/gt.txt
     export ESTIMATED_TRAJECTORY_FILE_HOST=$OUTPUT_PATH_HOST/$OUTPUT_FILE_NAME
 
     export MAPPING_DATE=$2
