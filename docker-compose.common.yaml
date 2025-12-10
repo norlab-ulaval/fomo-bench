@@ -19,7 +19,7 @@ services:
 
   record-odometry-base:
     extends: ros-base
-    image: ghcr.io/norlab-ulaval/fomo-bench:latest
+    image: fomo-bench:latest
     init: true
     entrypoint: ["/app/entrypoints/entrypoint_record_odometry.sh"]
     volumes:
