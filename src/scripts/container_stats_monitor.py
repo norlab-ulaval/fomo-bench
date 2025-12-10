@@ -22,36 +22,37 @@ def signal_handler(sig, frame):
 
 def get_container_stats(container_name):
     """Get Docker container stats as JSON"""
-    try:
-        result = subprocess.run(
-            [
-                "docker",
-                "container",
-                "stats",
-                container_name,
-                "--no-stream",
-                "--format",
-                "json",
-            ],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return json.loads(result.stdout)
-    except subprocess.CalledProcessError as e:
-        print(f"Error getting stats: {e}")
-        return None
-    except json.JSONDecodeError as e:
-        print(f"Error parsing JSON: {e}")
-        return None
+    result = subprocess.run(
+        [
+            "docker",
+            "container",
+            "stats",
+            container_name,
+            "--no-stream",
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return json.loads(result.stdout)
 
 
 def log_stats(container_name: str, output_path: Path):
     stats_list = []
     err_ctr = 0
+    err_msg = ""
 
     while True:
-        stats = get_container_stats(container_name)
+        try:
+            stats = get_container_stats(container_name)
+        except subprocess.CalledProcessError as e:
+            err_msg = f"Error getting stats: {e}"
+            stats = None
+        except json.JSONDecodeError as e:
+            err_msg = f"Error parsing JSON: {e}"
+            stats = None
 
         if stats:
             # Add timestamp
@@ -65,7 +66,7 @@ def log_stats(container_name: str, output_path: Path):
             err_ctr += 1
             if err_ctr > 5:
                 print(
-                    f"Failed to get stats for {container_name} after 5 attempts. Stopping."
+                    f"Failed to get stats for {container_name} after 5 attempts. Stopping. Error: {err_msg}"
                 )
                 break
 
