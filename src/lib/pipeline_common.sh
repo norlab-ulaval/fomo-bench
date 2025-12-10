@@ -108,7 +108,9 @@ prepare_output_directory() {
 
 save_slam_logs() {
     sleep 2
-    docker logs run_slam > "${PROCESSING_PATH_HOST}/run_slam_${LOCALIZATION_DATE}.log"
+    docker logs run_slam_1 > "${PROCESSING_PATH_HOST_1}/run_slam_${LOCALIZATION_DATE}.log"
+    docker logs run_slam_2 > "${PROCESSING_PATH_HOST_2}/run_slam_${LOCALIZATION_DATE}.log"
+    docker logs run_slam_3 > "${PROCESSING_PATH_HOST_3}/run_slam_${LOCALIZATION_DATE}.log"
 }
 
 # Start SLAM services and verify they're running
@@ -127,24 +129,32 @@ start_slam_services() {
 
     info "Starting SLAM services in the background..."
     # Start SLAM and odometry recorder in detached mode
-    $DOCKER_COMPOSE_CMD up -d run_slam record_odometry run_foxglove
+    $DOCKER_COMPOSE_CMD up -d run_slam_1 run_slam_2 run_slam_3 record_odometry_1 record_odometry_2 record_odometry_3 run_foxglove
 
     info "Verifying that background services are running..."
     sleep 10 # Give services a moment to start or fail. Adjust if your SLAM system takes longer to initialize.
 
-    # Specifically check the 'run_slam' service, as it's the most likely to fail.
-    # We get a list of services with status "running" and check if run_slam is in it.
-    RUN_SLAM_STATUS=$($DOCKER_COMPOSE_CMD ps --services --filter "status=running" | grep -w "run_slam" || true)
+    check_slam_status "run_slam_1"
+    check_slam_status "run_slam_2"
+    check_slam_status "run_slam_3"
+    
+}
+
+check_slam_status() {
+    # Specifically check the 'service_name' service, as it's the most likely to fail.
+    # We get a list of services with status "running" and check if 'service_name' is in it.
+    service_name=$1
+    RUN_SLAM_STATUS=$($DOCKER_COMPOSE_CMD ps --services --filter "status=running" | grep -w $service_name || true)
 
     if [ -z "$RUN_SLAM_STATUS" ]; then
-        error "'run_slam' service failed to start or exited unexpectedly."
-        info "Showing recent logs for 'run_slam' to help diagnose:"
+        error "'${service_name}' service failed to start or exited unexpectedly."
+        info "Showing recent logs for '${service_name}' to help diagnose:"
         # Show the last 20 lines of the log to help the user.
-        $DOCKER_COMPOSE_CMD logs --tail=20 run_slam
+        $DOCKER_COMPOSE_CMD logs --tail=20 ${service_name}
         # The script will exit here, and the 'trap' will run the cleanup function.
         return 1
     else
-        success "'run_slam' service started successfully."
+        success "'${service_name}' service started successfully."
         return 0
     fi
 }
@@ -186,13 +196,23 @@ eval_single_trajectory() {
     export OUTPUT_FILE_NAME="${2}_${3}.txt" # name of the recorded odometry file
 
     export REFERENCE_TRAJECTORY_FILE_HOST=$1/gt.txt
-    export ESTIMATED_TRAJECTORY_FILE_HOST=$OUTPUT_PATH_HOST/$OUTPUT_FILE_NAME
+    export OUTPUT_PATH_HOST_1=$OUTPUT_PATH_HOST/$OUTPUT_PREFIX_SLAM_1
+    export OUTPUT_PATH_HOST_2=$OUTPUT_PATH_HOST/$OUTPUT_PREFIX_SLAM_2
+    export OUTPUT_PATH_HOST_3=$OUTPUT_PATH_HOST/$OUTPUT_PREFIX_SLAM_3
+
+    export ESTIMATED_TRAJECTORY_FILE_HOST_1=$OUTPUT_PATH_HOST_1/$OUTPUT_FILE_NAME
+    export ESTIMATED_TRAJECTORY_FILE_HOST_2=$OUTPUT_PATH_HOST_2/$OUTPUT_FILE_NAME
+    export ESTIMATED_TRAJECTORY_FILE_HOST_3=$OUTPUT_PATH_HOST_3/$OUTPUT_FILE_NAME
 
     export MAPPING_DATE=$2
     export LOCALIZATION_DATE=$3
 
-    export PROCESSING_PATH_HOST=$PROCESSING_PATH_BASE/$MAPPING_DATE
-    mkdir -p $PROCESSING_PATH_HOST
+    export PROCESSING_PATH_HOST_1=$PROCESSING_PATH_BASE/$OUTPUT_PREFIX_SLAM_1/$MAPPING_DATE
+    export PROCESSING_PATH_HOST_2=$PROCESSING_PATH_BASE/$OUTPUT_PREFIX_SLAM_2/$MAPPING_DATE
+    export PROCESSING_PATH_HOST_3=$PROCESSING_PATH_BASE/$OUTPUT_PREFIX_SLAM_3/$MAPPING_DATE
+    mkdir -p $PROCESSING_PATH_HOST_1
+    mkdir -p $PROCESSING_PATH_HOST_2
+    mkdir -p $PROCESSING_PATH_HOST_3
 
     if [ ! -d "$BAGFILE_PATH_HOST" ]; then
         error "Bagfile path: $BAGFILE_PATH_HOST does not exist on host"
@@ -203,18 +223,44 @@ eval_single_trajectory() {
         debug "Bagfile path: $BAGFILE_PATH_HOST on host"
         debug "Calibration path: $CALIB_PATH_HOST on host"
         debug "Odometry recording saves data to $OUTPUT_FILE_NAME"
-        debug "Estimated trajectory is stored in $ESTIMATED_TRAJECTORY_FILE_HOST on host"
-        debug "Saving tpm files to ${PROCESSING_PATH_HOST} on host"
+        debug "Estimated trajectory is stored in $ESTIMATED_TRAJECTORY_FILE_HOST_1 on host"
+        debug "Estimated trajectory is stored in $ESTIMATED_TRAJECTORY_FILE_HOST_2 on host"
+        debug "Estimated trajectory is stored in $ESTIMATED_TRAJECTORY_FILE_HOST_3 on host"
+        debug "Saving tpm files to ${PROCESSING_PATH_HOST_1} on host"
+        debug "Saving tpm files to ${PROCESSING_PATH_HOST_2} on host"
+        debug "Saving tpm files to ${PROCESSING_PATH_HOST_3} on host"
         # Start SLAM services and verify they're running
         if ! start_slam_services; then
             return 1
         fi
+
+        # Start resource monitoring services
+        info "Starting SLAM monitoring services..."
+        # Stop any existing monitoring services
+
+        info "Starting SLAM monitoring services in the background..."
+        python src/scripts/container_stats_monitor.py --name  run_slam_1 -o $PROCESSING_PATH_HOST_1/stats_${LOCALIZATION_DATE}.json &
+        stats_pid_1=$!
+        python src/scripts/container_stats_monitor.py --name  run_slam_2 -o $PROCESSING_PATH_HOST_2/stats_${LOCALIZATION_DATE}.json &
+        stats_pid_2=$!
+        python src/scripts/container_stats_monitor.py --name  run_slam_3 -o $PROCESSING_PATH_HOST_3/stats_${LOCALIZATION_DATE}.json &
+        stats_pid_3=$!
+
+        python src/scripts/container_stats_monitor.py --name  play_bag -o $PROCESSING_PATH_BASE/stats_playbag_${MAPPING_DATE}_${LOCALIZATION_DATE}.json &
+        stats_pid_rosbag=$!
 
         # Run bagfile playback
         play_bagfile
 
         # Stop all containers
         stop_containers
+
+        # Stop all monitoring services
+        kill $stats_pid_1
+        kill $stats_pid_2
+        kill $stats_pid_3
+        kill $stats_pid_rosbag
+        info "All monitoring services terminated"
 
         # Any container output should be saved at this point
         save_slam_logs
@@ -224,10 +270,20 @@ eval_single_trajectory() {
         # Check if the method generated a trajectory file
         # This might be the case with SLAM methods that do loop closure
         # In that case, the recorded trajectory would be wrong.
-        if [ -f "${PROCESSING_PATH_HOST}/trajectory.txt" ]; then
+        if [ -f "${PROCESSING_PATH_HOST_1}/trajectory.txt" ]; then
             info "Method generated a final trajectory file, replacing existing one..."
-            mv $ESTIMATED_TRAJECTORY_FILE_HOST "${ESTIMATED_TRAJECTORY_FILE_HOST}_bak"
-            cp "${PROCESSING_PATH_HOST}/trajectory.txt" "${ESTIMATED_TRAJECTORY_FILE_HOST}"
+            mv $ESTIMATED_TRAJECTORY_FILE_HOST_1 "${ESTIMATED_TRAJECTORY_FILE_HOST_1}_bak"
+            cp "${PROCESSING_PATH_HOST_1}/trajectory.txt" "${ESTIMATED_TRAJECTORY_FILE_HOST_1}"
+        fi
+        if [ -f "${PROCESSING_PATH_HOST_2}/trajectory.txt" ]; then
+            info "Method generated a final trajectory file, replacing existing one..."
+            mv $ESTIMATED_TRAJECTORY_FILE_HOST_2 "${ESTIMATED_TRAJECTORY_FILE_HOST_2}_bak"
+            cp "${PROCESSING_PATH_HOST_2}/trajectory.txt" "${ESTIMATED_TRAJECTORY_FILE_HOST_2}"
+        fi
+        if [ -f "${PROCESSING_PATH_HOST_3}/trajectory.txt" ]; then
+            info "Method generated a final trajectory file, replacing existing one..."
+            mv $ESTIMATED_TRAJECTORY_FILE_HOST_3 "${ESTIMATED_TRAJECTORY_FILE_HOST_3}_bak"
+            cp "${PROCESSING_PATH_HOST_3}/trajectory.txt" "${ESTIMATED_TRAJECTORY_FILE_HOST_3}"
         fi
     fi
 

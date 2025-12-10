@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+
+import subprocess
+import json
+import sys
+import time
+import argparse
+from datetime import datetime
+import signal
+from pathlib import Path
+
+# Global variable for signal handler
+output_file = None
+
+
+def signal_handler(sig, frame):
+    """Handle Ctrl+C gracefully"""
+    if output_file:
+        print(f"\nStats saved to {output_file}")
+    sys.exit(0)
+
+
+def get_container_stats(container_name):
+    """Get Docker container stats as JSON"""
+    try:
+        result = subprocess.run(
+            [
+                "docker",
+                "container",
+                "stats",
+                container_name,
+                "--no-stream",
+                "--format",
+                "json",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return json.loads(result.stdout)
+    except subprocess.CalledProcessError as e:
+        print(f"Error getting stats: {e}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON: {e}")
+        return None
+
+
+def log_stats(container_name: str, output_path: Path):
+    stats_list = []
+
+    while True:
+        stats = get_container_stats(container_name)
+
+        if stats:
+            # Add timestamp
+            stats["timestamp"] = datetime.utcnow().isoformat() + "Z"
+            stats_list.append(stats)
+
+            # Write to file after each collection
+            with open(output_path, "w") as f:
+                json.dump(stats_list, f, indent=2)
+
+        time.sleep(0.5)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Log Docker container stats to a JSON file with timestamps",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    parser.add_argument("--name", help="Name or ID of the Docker container to monitor")
+
+    parser.add_argument(
+        "-o",
+        "--output",
+        required=True,
+        help="Output path where the stats JSON file will be saved",
+    )
+
+    args = parser.parse_args()
+
+    # Register signal handler for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)
+
+    log_stats(args.name, Path(args.output).absolute())
