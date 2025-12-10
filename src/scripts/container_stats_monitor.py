@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-import subprocess
+import argparse
 import json
+import signal
+import subprocess
 import sys
 import time
-import argparse
-from datetime import datetime
-import signal
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Global variable for signal handler
@@ -56,7 +56,9 @@ def log_stats(container_name: str, output_path: Path):
 
         if stats:
             # Add timestamp
-            stats["timestamp"] = datetime.utcnow().isoformat() + "Z"
+            stats["timestamp"] = (
+                datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            )
             stats_list.append(stats)
 
             # Write to file after each collection

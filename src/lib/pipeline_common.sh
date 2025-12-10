@@ -323,7 +323,7 @@ eval_single_trajectory() {
         # Start the core services first
         info "Starting core services..."
 
-        python src/scripts/container_stats_monitor.py --name play_bag -o "$PROCESSING_PATH_BASE/stats_playbag_${MAPPING_DATE}_${LOCALIZATION_DATE}.json" &
+        python3 src/scripts/container_stats_monitor.py --name play_bag -o "$PROCESSING_PATH_BASE/stats_playbag_${MAPPING_DATE}_${LOCALIZATION_DATE}.json" &
         monitoring_pids+=($!)
 
         $DOCKER_COMPOSE_CMD up -d run_foxglove play_bag
