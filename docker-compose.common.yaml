@@ -1,0 +1,42 @@
+x-ros-env: &ros-env # ROS2 Domain ID for network isolation
+  ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+  # ROS2 Discovery configuration
+  ROS_DISCOVERY_SERVER: ${ROS_DISCOVERY_SERVER:-}
+  RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+  # Network configuration for containerized environments
+  ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
+  ROS_HOME: /tmp/.ros
+
+services:
+  ros-base:
+    networks:
+      - ros-net
+    environment:
+      <<: *ros-env
+    # Optional: IPC mode for better performance with other ROS2 containers
+    ipc: host
+    # user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
+
+  record-odometry-base:
+    extends: ros-base
+    image: ghcr.io/norlab-ulaval/fomo-bench:latest
+    init: true
+    entrypoint: ["/app/entrypoints/entrypoint_record_odometry.sh"]
+    volumes:
+      # Optional: Share DDS configuration
+      - /dev/shm:/dev/shm
+
+  slam-base:
+    extends: ros-base
+    # Image defined in child
+    working_dir: /data
+    volumes:
+      - ${SLAM_CONFIG_OVERRIDE_FILE:-./config/slam/override_config.yaml.example}:/config/override.yaml
+      - ${CALIB_PATH_HOST}:/calib
+      # Data volume defined in child
+      - ./ros_launchers/launch:/ros2_ws/src/ros_launchers/launch
+    deploy:
+      resources:
+        limits:
+          cpus: "3"
+          memory: 30G

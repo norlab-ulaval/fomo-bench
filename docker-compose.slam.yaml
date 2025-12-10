@@ -1,0 +1,32 @@
+services:
+  run_slam:
+    extends:
+      file: docker-compose.common.yaml
+      service: slam-base
+    image: ${SLAM_IMAGE}
+    container_name: run_slam_${SLAM_LABEL}
+    hostname: run_slam_${SLAM_LABEL}
+    environment:
+      IS_MAPPING: ${IS_MAPPING:-0}
+      STORAGE_PATH: /data
+      OUTPUT_NAMESPACE: ${SLAM_LABEL}
+    volumes:
+      - ${PROCESSING_PATH_HOST:-/tmp}:/data
+
+  record_odometry:
+    extends:
+      file: docker-compose.common.yaml
+      service: record-odometry-base
+    container_name: record_odometry_${SLAM_LABEL}
+    hostname: record_odometry_${SLAM_LABEL}
+    environment:
+      OUTPUT_FILE_NAME: ${OUTPUT_FILE_NAME}
+      OUTPUT_PATH_HOST: ${OUTPUT_PATH_HOST}
+      NAMESPACE: ${SLAM_LABEL}
+    volumes:
+      - ${OUTPUT_PATH_HOST:-/tmp}:/trajectory_files
+
+networks:
+  ros-net:
+    name: fomo-bench_ros-net
+    external: true
