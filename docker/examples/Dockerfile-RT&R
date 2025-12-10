@@ -146,6 +146,8 @@ USER ${USERID}:${GROUPID}
 SHELL ["/bin/bash", "-c"]
 
 RUN git clone --recurse-submodules --branch fomo-eval https://github.com/utiasASRL/vtr3.git $VTRSRC
+RUN git clone https://github.com/norlab-ulaval/fomo-bench.git /tmp/fomo-bench \
+    && mv /tmp/fomo-bench/ros_launchers $VTRSRC/main/src/ros_launchers
 RUN git clone https://github.com/utiasASRL/fomo_rtr_wrapper.git $VTRSRC/main/src/fomo_rtr_wrapper
 RUN touch $VTRSRC/main/src/deps/gpusurf/COLCON_IGNORE
 
@@ -158,4 +160,4 @@ RUN source /opt/ros/humble/setup.bash && cd $VTRSRC/main && colcon build --symli
 
 STOPSIGNAL SIGINT
 
-CMD ["/bin/bash", "-c", "source $VTRSRC/main/install/setup.bash && ros2 launch --noninteractive fomo_rtr_wrapper rtr_fomo.launch.py base_params:=cir_warthog_default.yaml"]
+CMD ["/bin/bash", "-c", "source $VTRSRC/main/install/setup.bash && ros2 launch --noninteractive ros_launchers rtar.launch.py base_params:=cir_warthog_default.yaml"]

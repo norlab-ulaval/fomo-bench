@@ -9,7 +9,7 @@ from launch_ros.actions import Node
 
 IS_MAPPING = os.getenv("IS_MAPPING") == "1"
 STORAGE_PATH = os.getenv("STORAGE_PATH")
-OUTPUT_PREFIX = os.getenv("OUTPUT_PREFIX")
+OUTPUT_NAMESPACE = os.getenv("OUTPUT_NAMESPACE")
 IMU_TYPE = "vectornav"  # or 'xsens'
 
 if IS_MAPPING is None:
@@ -98,7 +98,7 @@ def generate_launch_description():
             }
         ],
         remappings=[
-            ("camera_pose", f"{OUTPUT_PREFIX}/estimated_pose"),
+            ("camera_pose", f"{OUTPUT_NAMESPACE}/estimated_pose"),
             ("image_left", "zedx/left/image_rect"),
             ("image_right", "zedx/right/image_rect"),
             ("imu", f"{IMU_TYPE}/data"),
