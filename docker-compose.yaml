@@ -22,8 +22,8 @@ services:
         deploy:
             resources:
                 limits:
-                    cpus: "2"
-                    memory: 50G
+                    cpus: ${ROSBAG_PLAY_CPU_LIMIT}
+                    memory: ${ROSBAG_PLAY_RAM_LIMIT}
 
     run_foxglove:
         extends:
