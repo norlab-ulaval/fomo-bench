@@ -9,7 +9,7 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
-OUTPUT_NAMESPACE = os.getenv("OUTPUT_NAMESPACE")
+NAMESPACE = os.getenv("NAMESPACE")
 
 
 def generate_launch_description():
@@ -65,12 +65,13 @@ def generate_launch_description():
                     },
                 ],
                 remappings=[
-                    ("/vtr/odometry", f"/{OUTPUT_NAMESPACE}/estimated_odom"),
+                    ("odometry", "estimated_odom"),
+                    ("/tf", "tf"),
                 ],
             ),
             Node(
                 package="fomo_rtr_wrapper",
-                namespace="vtr",
+                namespace=NAMESPACE,
                 executable="start_rtr_fomo",
                 output="screen",
             ),
