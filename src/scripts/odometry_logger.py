@@ -26,6 +26,11 @@ class OdometryLogger(Node):
 
     def __init__(self):
         super().__init__("odometry_logger")
+        namespace = os.getenv("NAMESPACE", "")
+
+        if not len(namespace) == 0:
+            namespace = "/" + namespace
+        self.get_logger().info(f"Namespace is set to: {namespace}")
 
         # --- Setup Directory and File ---
         # This section runs once when the node starts.
@@ -53,7 +58,7 @@ class OdometryLogger(Node):
         # The 'odometry_callback' function will be executed for each message.
         self.subscription = self.create_subscription(
             Odometry,
-            "/estimated_odom",
+            f"{namespace}/estimated_odom",
             self.odometry_callback,
             10,  # QoS history depth
         )
@@ -62,19 +67,19 @@ class OdometryLogger(Node):
         # The 'pose_callback' function will be executed for each message.
         self.subscription = self.create_subscription(
             PoseWithCovarianceStamped,
-            "/estimated_pose_with_covariance",
+            f"{namespace}/estimated_pose_with_covariance",
             self.pose_with_covariance_callback,
             10,  # QoS history depth
         )
         self.subscription = self.create_subscription(
             PoseStamped,
-            "/estimated_pose",
+            f"{namespace}/estimated_pose",
             self.pose_callback,
             10,  # QoS history depth
         )
 
         self.get_logger().info(
-            "Odometry logger started. Listening to /estimated_odom and /estimated_pose..."
+            f"Odometry logger started. Listening to {namespace}/estimated_odom and {namespace}/estimated_pose..."
         )
 
         # Create throttled loggers for periodic messages
