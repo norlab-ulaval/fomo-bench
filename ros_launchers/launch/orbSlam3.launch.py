@@ -9,7 +9,7 @@ from launch_ros.actions import Node
 
 IS_MAPPING = os.getenv("IS_MAPPING") == "1"
 STORAGE_PATH = os.getenv("STORAGE_PATH")
-OUTPUT_NAMESPACE = os.getenv("OUTPUT_NAMESPACE")
+NAMESPACE = os.getenv("NAMESPACE")
 IMU_TYPE = "vectornav"  # or 'xsens'
 
 if IS_MAPPING is None:
@@ -70,6 +70,7 @@ def generate_launch_description():
         package="orbslam3",
         executable="stereo-inertial",
         name="orbslam3_stereo",
+        namespace=NAMESPACE,
         output="screen",
         sigterm_timeout="60",  # Wait 30 seconds before escalating to SIGTERM
         sigkill_timeout="10",  # Wait 5 more seconds before SIGKILL
@@ -98,9 +99,9 @@ def generate_launch_description():
             }
         ],
         remappings=[
-            ("camera_pose", f"{OUTPUT_NAMESPACE}/estimated_pose"),
-            ("image_left", "zedx/left/image_rect"),
-            ("image_right", "zedx/right/image_rect"),
+            ("camera_pose", "estimated_pose"),
+            ("image_left", "/zedx/left/image_rect"),
+            ("image_right", "/zedx/right/image_rect"),
             ("imu", f"{IMU_TYPE}/data"),
         ],
     )
