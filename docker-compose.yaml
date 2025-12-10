@@ -12,6 +12,7 @@ services:
     environment:
       BAGFILE_PATH_HOST: ${BAGFILE_PATH_HOST}
       ROSBAG_PLAY_RATE: ${ROSBAG_PLAY_RATE}
+      ROSBAG_READ_AHEAD_QUEUE_SIZE: ${ROSBAG_READ_AHEAD_QUEUE_SIZE}
       TOPICS_FILE: ${TOPICS_FILE}
     volumes:
       - ${BAGFILE_PATH_HOST}:/rosbag_file
