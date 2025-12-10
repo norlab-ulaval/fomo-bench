@@ -1,6 +1,5 @@
 import os
 
-import yaml
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
@@ -10,6 +9,7 @@ from launch_ros.actions import Node
 
 IS_MAPPING = os.getenv("IS_MAPPING") == "1"
 STORAGE_PATH = os.getenv("STORAGE_PATH")
+OUTPUT_PREFIX = os.getenv("OUTPUT_PREFIX")
 IMU_TYPE = "vectornav"  # or 'xsens'
 
 if IS_MAPPING is None:
@@ -98,7 +98,7 @@ def generate_launch_description():
             }
         ],
         remappings=[
-            ("camera_pose", "estimated_pose"),
+            ("camera_pose", f"{OUTPUT_PREFIX}/estimated_pose"),
             ("image_left", "zedx/left/image_rect"),
             ("image_right", "zedx/right/image_rect"),
             ("imu", f"{IMU_TYPE}/data"),
