@@ -46,8 +46,9 @@ fi
 # Append basic topics to the list of topics
 TOPICS=("${TOPICS[@]}" "/tf_static" "/vectornav/data_raw" "/xsens/data_raw" "/warthog/platform/odom")
 
-
-ROSBAG_PLAY_COMMAND="ros2 bag play ${BAG_FILES_TO_PLAY} --clock -r${ROSBAG_PLAY_RATE} --read-ahead-queue-size 100 -s mcap"
+# Start the rosbag play with a large read-ahead queue
+# We need to start it paused to allow all data to be loaded before we can start the data processing
+ROSBAG_PLAY_COMMAND="ros2 bag play ${BAG_FILES_TO_PLAY} --clock -r${ROSBAG_PLAY_RATE} --read-ahead-queue-size 50000 -s mcap -p"
 # if TOPICS is not empty, play only the topics in TOPICS
 if [ -n "$TOPICS" ]; then
     echo "Playing only the topics in TOPICS..."
@@ -57,10 +58,43 @@ fi
 echo "Playing the bagfile..."
 echo $ROSBAG_PLAY_COMMAND
 
-if ! $ROSBAG_PLAY_COMMAND; then
-    echo "Error: Failed to play the bagfile."
+# Start rosbag play in background
+$ROSBAG_PLAY_COMMAND &
+ROSBAG_PID=$!
+
+# Check if it started
+if ! ps -p $ROSBAG_PID > /dev/null; then
+    echo "Error: Failed to start rosbag play."
     exit 1
 fi
 
-echo "Played the bagfile. Exiting with success."
-exit 0
+echo "Rosbag play started in tmux session 'rosbag_play'"
+
+# Wait for 120 seconds
+echo "Waiting 120 seconds before unpausing..."
+sleep 120
+
+# Call the ROS2 service to toggle paused
+echo "Unpausing rosbag play..."
+ros2 service call /rosbag2_player/resume rosbag2_interfaces/srv/Resume
+
+# Check if service call was successful
+if [ $? -eq 0 ]; then
+    echo "Successfully toggled pause state"
+else
+    echo "Warning: Failed to toggle pause state"
+fi
+
+# Wait for rosbag to finish
+echo "Waiting for rosbag play to complete..."
+wait $ROSBAG_PID
+ROSBAG_EXIT_CODE=$?
+
+if [ $ROSBAG_EXIT_CODE -eq 0 ]; then
+    echo "Played the bagfile. Exiting with success."
+    exit 0
+else
+    echo "Error: Rosbag play failed with exit code $ROSBAG_EXIT_CODE"
+    exit 1
+fi
+
