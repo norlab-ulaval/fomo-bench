@@ -46,17 +46,17 @@ services:
   evaluate_trajectory:
     init: true
     image: ghcr.io/norlab-ulaval/fomo-bench:latest
-    container_name: evaluate_trajectory
+    container_name: evaluate_trajectory_${SLAM_LABEL}
+    hostname: evaluate_trajectory_${SLAM_LABEL}
     # user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
     environment:
-      TEST_MODE: ${TEST_MODE}
       MAPPING_DATE: ${MAPPING_DATE:-}
       LOCALIZATION_DATE: ${LOCALIZATION_DATE:-}
       SLAM_NAME: ${SLAM_IMAGE:-}
       MPLCONFIGDIR: /tmp/.matplotlib
     volumes:
-      - ${REFERENCE_TRAJECTORY_FILE_HOST:-/reference_trajectory.txt}:/reference_trajectory.txt
-      - ${ESTIMATED_TRAJECTORY_FILE_HOST:-/estimated_trajectory.txt}:/estimated_trajectory.txt
+      - ${REFERENCE_TRAJECTORY_FILE_HOST:-/tmp/reference_trajectory.txt}:/reference_trajectory.txt
+      - ${ESTIMATED_TRAJECTORY_FILEPATH_HOST:-/dev/null}:/estimated_trajectory.txt
       - ${OUTPUT_PATH_HOST:-/evaluation_output}:/evaluation_output
     entrypoint: ["/app/entrypoints/entrypoint_evaluate.sh"]
 

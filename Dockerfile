@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip install uv
 
 # Install FoMo SDK which includes all python dependencies
-RUN cd /opt && git clone https://github.com/norlab-ulaval/fomo-sdk.git && cd fomo-sdk && uv sync
+RUN cd /opt && git clone https://github.com/norlab-ulaval/fomo-sdk.git && cd fomo-sdk && uv pip install --system . 
 
 # Set up a standard working directory
 WORKDIR /app
