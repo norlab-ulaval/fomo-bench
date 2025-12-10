@@ -16,7 +16,7 @@ OUTPUT_FILE_NAME = os.getenv("OUTPUT_FILE_NAME", "estimated_trajectory.txt")
 if len(OUTPUT_FILE_NAME) == 0:
     OUTPUT_FILE_NAME = "estimated_trajectory.txt"
 # The full path to the output CSV file.
-CSV_FILE = os.path.join(OUTPUT_PATH_DIR, OUTPUT_FILE_NAME)
+OUTPUT_FILE = os.path.join(OUTPUT_PATH_DIR, OUTPUT_FILE_NAME)
 
 
 class OdometryLogger(Node):
@@ -41,10 +41,10 @@ class OdometryLogger(Node):
 
             # Create a new, empty file (or clear an existing one).
             # This ensures the node starts with a fresh log file every time.
-            with open(CSV_FILE, "w") as f:
+            with open(OUTPUT_FILE, "w") as f:
                 pass  # This will create an empty file or truncate an existing one.
             self.get_logger().info(
-                f"Successfully created/cleared trajectory file: {CSV_FILE}"
+                f"Successfully created/cleared trajectory file: {OUTPUT_FILE}"
             )
         except OSError as e:
             self.get_logger().error(f"Failed to create directory or file: {e}")
@@ -107,7 +107,7 @@ class OdometryLogger(Node):
 
         # Append the pose to the file
         try:
-            with open(CSV_FILE, "a") as f:
+            with open(OUTPUT_FILE, "a") as f:
                 # Use a space as a delimiter for the TUM format
                 writer = csv.writer(f, delimiter=" ")
                 # Write the data row: timestamp tx ty tz qx qy qz qw
@@ -116,13 +116,13 @@ class OdometryLogger(Node):
             # Throttled error logging (once per second)
             current_time = self.get_clock().now()
             if (current_time - self._last_error_time).nanoseconds / 1e9 >= 1.0:
-                self.get_logger().error(f"Could not write to file {CSV_FILE}: {e}")
+                self.get_logger().error(f"Could not write to file {OUTPUT_FILE}: {e}")
                 self._last_error_time = current_time
 
         # Log the received data to the console (throttled to once every 10 seconds)
         current_time = self.get_clock().now()
         if (current_time - self._last_log_time).nanoseconds / 1e9 >= 10.0:
-            self.get_logger().info(f"Logged odometry data to {CSV_FILE}")
+            self.get_logger().info(f"Logged odometry data to {OUTPUT_FILE}")
             self._last_log_time = current_time
 
     def odometry_callback(self, msg: Odometry):

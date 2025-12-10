@@ -9,7 +9,7 @@ services:
     environment:
       IS_MAPPING: ${IS_MAPPING:-0}
       STORAGE_PATH: /data
-      OUTPUT_NAMESPACE: ${SLAM_LABEL}
+      NAMESPACE: ${SLAM_LABEL}
     volumes:
       - ${PROCESSING_PATH_HOST:-/tmp}:/data
 

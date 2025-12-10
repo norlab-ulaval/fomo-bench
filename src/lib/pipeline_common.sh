@@ -30,8 +30,6 @@ debug() { echo -e "${C_GRAY}DEBUG: $1${C_RESET}" >&2; }
 # Function to be called on script exit or interruption (Ctrl+C)
 stop_containers() {
     info "Stopping all containers."
-    # Use the determined DOCKER_COMPOSE_CMD to ensure consistency
-    ${DOCKER_COMPOSE_CMD:-docker compose} stop
 
     for i in "${!SLAM_IMAGES[@]}"; do
         slam_image="${SLAM_IMAGES[$i]}"
@@ -46,6 +44,9 @@ stop_containers() {
             docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml stop
         fi
     done
+    
+    # Use the determined DOCKER_COMPOSE_CMD to ensure consistency
+    ${DOCKER_COMPOSE_CMD:-docker compose} stop
     success "Stopping complete."
 }
 
