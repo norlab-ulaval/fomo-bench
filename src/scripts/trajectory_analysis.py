@@ -21,19 +21,16 @@ def parse_arguments():
         "--gt",
         default="/reference_trajectory.txt",
         help="Path to the ground truth trajectory file",
-        required=True,
     )
     parser.add_argument(
         "--est",
         default="/estimated_trajectory.txt",
         help="Path to the estimated trajectory file",
-        required=True,
     )
     parser.add_argument(
         "--output",
         default="/evaluation_output",
         help="Directory to store output files",
-        required=True,
     )
     parser.add_argument(
         "--zero",
@@ -65,5 +62,5 @@ if __name__ == "__main__":
         args.slam,
         args.zero,
         export_yaml=True,
-        export_figures=True,
+        export_figure=True,
     )

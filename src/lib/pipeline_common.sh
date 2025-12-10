@@ -220,9 +220,23 @@ play_bagfile() {
 
 # Run trajectory evaluation
 run_evaluation() {
-    info "Running trajectory evaluation..."
-    $DOCKER_COMPOSE_CMD up evaluate_trajectory
-    success "Evaluation complete."
+    for i in "${!SLAM_IMAGES[@]}"; do
+        slam_image="${SLAM_IMAGES[$i]}"
+        if [ -n "$slam_image" ]; then
+            slam_label=$(generate_slam_label "$slam_image")
+
+            # Export variables for this specific SLAM instance
+            # REFERENCE_TRAJECTORY_FILE_HOST is stable between SLAMs
+            export SLAM_IMAGE="$slam_image"
+            export SLAM_LABEL="$slam_label"
+            export ESTIMATED_TRAJECTORY_FILEPATH_HOST="${OUTPUT_PATH_HOST_BASE}/${slam_label}/${ESTIMATED_TRAJECTORY_FILENAME_HOST}"
+            export OUTPUT_PATH_HOST="${OUTPUT_PATH_HOST_BASE}/${slam_label}"
+            if [ -f "$ESTIMATED_TRAJECTORY_FILEPATH_HOST" ]; then
+                info "Running trajectory evaluation for $slam_image..."
+                $DOCKER_COMPOSE_CMD -p "fomo-slam-${slam_label}" up -d evaluate_trajectory --remove-orphans
+            fi
+        fi
+    done
 }
 
 # Try to open a report file
@@ -240,6 +254,42 @@ open_report() {
     fi
 }
 
+wait_for_message_queue() {
+    info "Waiting for play_bag to load data in the message queue..."
+    # Show how much memory does the service take in a loop
+    prev_mem=""
+    while true; do
+        current_mem=$(docker stats play_bag --no-stream --format '{{.MemUsage}}' | cut -d'/' -f1 | sed 's/[^0-9.]//g')
+        
+        if [ -n "$prev_mem" ]; then
+            # Calculate relative change percentage
+            change=$(awk -v curr="$current_mem" -v prev="$prev_mem" 'BEGIN {
+                if (prev != 0) {
+                    diff = (curr - prev) / prev * 100
+                    print diff
+                } else {
+                    print 0
+                }
+            }')
+            
+            echo -ne "\rMemory usage of play_bag: $(docker stats play_bag --no-stream --format '{{.MemUsage}}') | Change: ${change}%    "
+            
+            # Check if absolute change is less than 1%
+            abs_change=$(awk -v c="$change" 'BEGIN {print (c < 0 ? -c : c)}')
+            if (( $(awk -v a="$abs_change" 'BEGIN {print (a < 1 ? 1 : 0)}') )); then
+                break
+            fi
+        else
+            echo -ne "\rMemory usage of play_bag: $(docker stats play_bag --no-stream --format '{{.MemUsage}}') | Change: N/A    "
+        fi
+        
+        prev_mem=$current_mem
+        sleep 1
+    done
+    echo  # Print newline at the end
+    success "Play bag is ready."
+}
+
 
 # Function to run the pipeline for a given trajectory
 eval_single_trajectory() {
@@ -255,6 +305,7 @@ eval_single_trajectory() {
 
     export MAPPING_DATE=$2
     export LOCALIZATION_DATE=$3
+    export ESTIMATED_TRAJECTORY_FILENAME_HOST=${MAPPING_DATE}_${LOCALIZATION_DATE}.txt
 
     if [ ! -d "$BAGFILE_PATH_HOST" ]; then
         error "Bagfile path: $BAGFILE_PATH_HOST does not exist on host"
@@ -272,9 +323,8 @@ eval_single_trajectory() {
         monitoring_pids+=($!)
 
         $DOCKER_COMPOSE_CMD up -d run_foxglove play_bag
+        wait_for_message_queue
 
-        info "Waiting for play_bag to load data in the message queue..."
-        sleep 120
         # Start resource monitoring services
         info "Starting SLAM monitoring services..."
         
@@ -315,7 +365,7 @@ eval_single_trajectory() {
         
         cleanup
 
-        # Trajectory file handling (generic)
+        # Trajectory file handling
        for i in "${!SLAM_IMAGES[@]}"; do
             slam_image="${SLAM_IMAGES[$i]}"
             if [ -n "$slam_image" ]; then
