@@ -11,7 +11,7 @@ IS_MAPPING = os.getenv("IS_MAPPING")
 STORAGE_PATH = os.getenv("STORAGE_PATH")
 INPUT_IMU_BIAS_FILE = os.path.join("/", "calib", "imu.json")
 LIDAR_TYPE = "robosense"
-OUTPUT_PREFIX = os.getenv("OUTPUT_PREFIX")
+OUTPUT_NAMESPACE = os.getenv("OUTPUT_NAMESPACE")
 
 if IS_MAPPING is None:
     print("IS_MAPPING is not set")
@@ -110,7 +110,7 @@ def generate_launch_description():
             ("points_in", f"{LIDAR_TYPE}/points"),
             ("scan_after_input_filters", f"{LIDAR_TYPE}/points_after_input_filters"),
             ("scan_after_deskew", f"{LIDAR_TYPE}/points_after_deskew"),
-            ("icp_odom", f"{OUTPUT_PREFIX}/estimated_odom"),
+            ("icp_odom", f"{OUTPUT_NAMESPACE}/estimated_odom"),
         ],
     )
 

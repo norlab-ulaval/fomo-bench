@@ -9,6 +9,8 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
+OUTPUT_NAMESPACE = os.getenv("OUTPUT_NAMESPACE")
+
 
 def generate_launch_description():
     # config directory
@@ -63,7 +65,7 @@ def generate_launch_description():
                     },
                 ],
                 remappings=[
-                    ("/vtr/odometry", "/estimated_odom"),
+                    ("/vtr/odometry", f"/{OUTPUT_NAMESPACE}/estimated_odom"),
                 ],
             ),
             Node(
