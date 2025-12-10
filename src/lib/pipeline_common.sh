@@ -304,6 +304,9 @@ eval_single_trajectory() {
     export OUTPUT_PATH_HOST_BASE=$OUTPUT_PATH_HOST
     export PROCESSING_PATH_BASE=$PROCESSING_PATH_BASE # Already set in .env usually
 
+    mkdir -p "$PROCESSING_PATH_BASE"
+    mkdir -p "$OUTPUT_PATH_HOST_BASE"
+
     export MAPPING_DATE=$2
     export LOCALIZATION_DATE=$3
     export ESTIMATED_TRAJECTORY_FILENAME_HOST=${MAPPING_DATE}_${LOCALIZATION_DATE}.txt

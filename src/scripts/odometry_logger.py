@@ -25,13 +25,15 @@ class OdometryLogger(Node):
     """
 
     def __init__(self):
-        super().__init__("odometry_logger")
         namespace = os.getenv("NAMESPACE", "")
+        node_name = "odometry_logger"
 
         if not len(namespace) == 0:
+            node_name = f"{namespace}_{node_name}"
             namespace = "/" + namespace
-        self.get_logger().info(f"Namespace is set to: {namespace}")
 
+        super().__init__(node_name)
+        self.get_logger().info(f"Namespace is set to: {namespace}")
         # --- Setup Directory and File ---
         # This section runs once when the node starts.
         try:
