@@ -11,7 +11,7 @@ IS_MAPPING = os.getenv("IS_MAPPING")
 STORAGE_PATH = os.getenv("STORAGE_PATH")
 INPUT_IMU_BIAS_FILE = os.path.join("/", "calib", "imu.json")
 LIDAR_TYPE = "robosense"
-OUTPUT_NAMESPACE = os.getenv("OUTPUT_NAMESPACE")
+NAMESPACE = os.getenv("NAMESPACE")
 
 if IS_MAPPING is None:
     print("IS_MAPPING is not set")
@@ -50,6 +50,7 @@ def generate_launch_description():
     ekf_odom_node = Node(
         package="robot_localization",
         executable="ekf_node",
+        # namespace=NAMESPACE,
         name="ekf_odom_node",
         output="screen",
         respawn=True,
@@ -59,13 +60,14 @@ def generate_launch_description():
                 "use_sim_time": LaunchConfiguration("use_sim_time"),
             },
         ],
-        remappings=[("/odometry/filtered", "/ekf/odom")],
+        remappings=[("odometry/filtered", "ekf/odom"), ("/tf", f"/{NAMESPACE}/tf")],
     )
 
     mapping_node = Node(
         package="norlab_icp_mapper_ros",
         executable="mapper_node",
         name="mapper_node",
+        namespace=NAMESPACE,
         output="screen",
         sigterm_timeout="60",  # Wait 30 seconds before escalating to SIGTERM
         sigkill_timeout="10",  # Wait 5 more seconds before SIGKILL
@@ -107,10 +109,11 @@ def generate_launch_description():
             }
         ],
         remappings=[
-            ("points_in", f"{LIDAR_TYPE}/points"),
-            ("scan_after_input_filters", f"{LIDAR_TYPE}/points_after_input_filters"),
-            ("scan_after_deskew", f"{LIDAR_TYPE}/points_after_deskew"),
-            ("icp_odom", f"{OUTPUT_NAMESPACE}/estimated_odom"),
+            ("points_in", f"/{LIDAR_TYPE}/points"),
+            ("scan_after_input_filters", f"/{LIDAR_TYPE}/points_after_input_filters"),
+            ("scan_after_deskew", f"/{LIDAR_TYPE}/points_after_deskew"),
+            ("icp_odom", "estimated_odom"),
+            ("/tf", "tf"),
         ],
     )
 

@@ -10,6 +10,8 @@ from launch_ros.actions import Node
 INPUT_IMU_BIAS_FILE = os.path.join("/", "calib", "imu.json")
 IMU_TYPE = "vectornav"  # or 'xsens'
 
+NAMESPACE = os.getenv("NAMESPACE")
+
 
 def generate_launch_description():
     ld = LaunchDescription()
@@ -34,10 +36,6 @@ def generate_launch_description():
     else:
         print("No bias file found, using default values")
 
-    namespace = LaunchConfiguration("imu_ns")
-    namespace_launch_arg = DeclareLaunchArgument("imu_ns", default_value=IMU_TYPE)
-    ld.add_action(namespace_launch_arg)
-
     config_file = os.path.join(share_folder, "config", f"_{IMU_TYPE}.yaml")
 
     if IMU_TYPE == "vectornav":
@@ -45,6 +43,7 @@ def generate_launch_description():
             package="norlab_imu_tools",
             executable="imu_bias_compensator_node",
             name="bias_compensator",
+            namespace=NAMESPACE,
             parameters=[
                 config_file,
                 {
@@ -55,9 +54,10 @@ def generate_launch_description():
                 },
             ],
             remappings=[
-                ("imu_topic_in", f"{IMU_TYPE}/data_raw"),
-                ("bias_topic_in", f"{IMU_TYPE}/bias"),
+                ("imu_topic_in", f"/{IMU_TYPE}/data_raw"),
+                ("bias_topic_in", f"/{IMU_TYPE}/bias"),
                 ("imu_topic_out", f"{IMU_TYPE}/data_unbiased"),
+                ("/tf", "tf"),
             ],
             arguments=[
                 "--ros-args",
@@ -70,7 +70,7 @@ def generate_launch_description():
             package="imu_filter_madgwick",
             executable="imu_filter_madgwick_node",
             name="madgwick_filter",
-            namespace=namespace,
+            namespace=NAMESPACE,
             output="both",
             parameters=[
                 config_file,
@@ -79,9 +79,10 @@ def generate_launch_description():
                 },
             ],
             remappings=[
-                ("imu/data_raw", "data_unbiased"),
-                ("imu/mag", "mag"),
-                ("imu/data", "data"),
+                ("imu/data_raw", f"{IMU_TYPE}/data_unbiased"),
+                ("imu/mag", f"{IMU_TYPE}/mag"),
+                ("imu/data", f"{IMU_TYPE}/data"),
+                ("/tf", "tf"),
             ],
             arguments=[
                 "--ros-args",
