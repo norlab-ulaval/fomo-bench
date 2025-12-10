@@ -1,20 +1,20 @@
 services:
-  play_bag:
-    build:
-      context: .
-    image: fomo-bench:latest
+    play_bag:
+        build:
+            context: .
+        image: fomo-bench:latest
 
-  evaluate_trajectory:
-    build:
-      context: .
-    image: fomo-bench:latest
+    evaluate_trajectory:
+        build:
+            context: .
+        image: fomo-bench:latest
 
-  plot_confusion_matrix:
-    build:
-      context: .
-    image: fomo-bench:latest
+    plot_confusion_matrix:
+        build:
+            context: .
+        image: fomo-bench:latest
 
-  run_foxglove:
-    build:
-      context: .
-    image: fomo-bench:latest
+    run_foxglove:
+        build:
+            context: .
+        image: fomo-bench:latest

@@ -1,79 +1,79 @@
 # This file is configured for a secure, isolated ROS network.
 
 services:
-  play_bag:
-    extends:
-      file: docker-compose.common.yaml
-      service: ros-base
-    image: ghcr.io/norlab-ulaval/fomo-bench:latest
-    init: true
-    container_name: play_bag
-    hostname: play_bag
-    environment:
-      BAGFILE_PATH_HOST: ${BAGFILE_PATH_HOST}
-      ROSBAG_PLAY_RATE: ${ROSBAG_PLAY_RATE}
-      ROSBAG_READ_AHEAD_QUEUE_SIZE: ${ROSBAG_READ_AHEAD_QUEUE_SIZE}
-      TOPICS_FILE: ${TOPICS_FILE}
-    volumes:
-      - ${BAGFILE_PATH_HOST}:/rosbag_file
-      - ${TOPICS_FILE}:/tmp/topics.txt
-      - /dev/shm:/dev/shm
-    entrypoint: ["/app/entrypoints/entrypoint_play_bag.sh"]
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: 30G
+    play_bag:
+        extends:
+            file: docker-compose.common.yaml
+            service: ros-base
+        image: ghcr.io/norlab-ulaval/fomo-bench:latest
+        init: true
+        container_name: play_bag
+        hostname: play_bag
+        environment:
+            BAGFILE_PATH_HOST: ${BAGFILE_PATH_HOST}
+            ROSBAG_PLAY_RATE: ${ROSBAG_PLAY_RATE}
+            ROSBAG_READ_AHEAD_QUEUE_SIZE: ${ROSBAG_READ_AHEAD_QUEUE_SIZE}
+            TOPICS_FILE: ${TOPICS_FILE}
+        volumes:
+            - ${BAGFILE_PATH_HOST}:/rosbag_file
+            - ${TOPICS_FILE}:/tmp/topics.txt
+            - /dev/shm:/dev/shm
+        entrypoint: ["/app/entrypoints/entrypoint_play_bag.sh"]
+        deploy:
+            resources:
+                limits:
+                    cpus: "2"
+                    memory: 50G
 
-  run_foxglove:
-    extends:
-      file: docker-compose.common.yaml
-      service: ros-base
-    image: ghcr.io/norlab-ulaval/fomo-bench:latest
-    init: true
-    container_name: run_foxglove
-    hostname: run_foxglove
-    ports:
-      - "8772:8772"
-    environment:
-      OUTPUT_FILE_NAME: ${OUTPUT_FILE_NAME}
-      OUTPUT_PATH_HOST: ${OUTPUT_PATH_HOST}
-    volumes:
-      - ${OUTPUT_PATH_HOST}:/trajectory_files
-      - /dev/shm:/dev/shm
-    entrypoint: ["/app/entrypoints/entrypoint_foxglove.sh"]
+    run_foxglove:
+        extends:
+            file: docker-compose.common.yaml
+            service: ros-base
+        image: ghcr.io/norlab-ulaval/fomo-bench:latest
+        init: true
+        container_name: run_foxglove
+        hostname: run_foxglove
+        ports:
+            - "8772:8772"
+        environment:
+            OUTPUT_FILE_NAME: ${OUTPUT_FILE_NAME}
+            OUTPUT_PATH_HOST: ${OUTPUT_PATH_HOST}
+        volumes:
+            - ${OUTPUT_PATH_HOST}:/trajectory_files
+            - /dev/shm:/dev/shm
+        entrypoint: ["/app/entrypoints/entrypoint_foxglove.sh"]
 
-  evaluate_trajectory:
-    init: true
-    image: ghcr.io/norlab-ulaval/fomo-bench:latest
-    container_name: evaluate_trajectory_${SLAM_LABEL}
-    hostname: evaluate_trajectory_${SLAM_LABEL}
-    # user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
-    environment:
-      MAPPING_DATE: ${MAPPING_DATE:-}
-      LOCALIZATION_DATE: ${LOCALIZATION_DATE:-}
-      SLAM_NAME: ${SLAM_IMAGE:-}
-      MPLCONFIGDIR: /tmp/.matplotlib
-    volumes:
-      - ${REFERENCE_TRAJECTORY_FILE_HOST:-/tmp/reference_trajectory.txt}:/reference_trajectory.txt
-      - ${ESTIMATED_TRAJECTORY_FILEPATH_HOST:-/dev/null}:/estimated_trajectory.txt
-      - ${OUTPUT_PATH_HOST:-/evaluation_output}:/evaluation_output
-    entrypoint: ["/app/entrypoints/entrypoint_evaluate.sh"]
+    evaluate_trajectory:
+        init: true
+        image: ghcr.io/norlab-ulaval/fomo-bench:latest
+        container_name: evaluate_trajectory_${SLAM_LABEL}
+        hostname: evaluate_trajectory_${SLAM_LABEL}
+        # user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
+        environment:
+            MAPPING_DATE: ${MAPPING_DATE:-}
+            LOCALIZATION_DATE: ${LOCALIZATION_DATE:-}
+            SLAM_NAME: ${SLAM_IMAGE:-}
+            MPLCONFIGDIR: /tmp/.matplotlib
+        volumes:
+            - ${REFERENCE_TRAJECTORY_FILE_HOST:-/tmp/reference_trajectory.txt}:/reference_trajectory.txt
+            - ${ESTIMATED_TRAJECTORY_FILEPATH_HOST:-/dev/null}:/estimated_trajectory.txt
+            - ${OUTPUT_PATH_HOST:-/evaluation_output}:/evaluation_output
+        entrypoint: ["/app/entrypoints/entrypoint_evaluate.sh"]
 
-  plot_confusion_matrix:
-    init: true
-    image: ghcr.io/norlab-ulaval/fomo-bench:latest
-    container_name: plot_confusion_matrix
-    # user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
-    environment:
-      SLAM_NAME: ${SLAM_IMAGE:-}
-      MPLCONFIGDIR: /tmp/.matplotlib
-    volumes:
-      - ${OUTPUT_PATH_HOST:-/evaluation_output}:/evaluation_output
-    entrypoint: ["/app/entrypoints/entrypoint_plot_confusion_matrix.sh"]
+    plot_confusion_matrix:
+        init: true
+        image: ghcr.io/norlab-ulaval/fomo-bench:latest
+        container_name: plot_confusion_matrix
+        # user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
+        environment:
+            SLAM_NAME: ${SLAM_IMAGE:-}
+            MPLCONFIGDIR: /tmp/.matplotlib
+        volumes:
+            - ${OUTPUT_PATH_HOST:-/evaluation_output}:/evaluation_output
+        entrypoint: ["/app/entrypoints/entrypoint_plot_confusion_matrix.sh"]
 
 # Define the custom bridge network for isolated ROS communication.
 networks:
-  ros-net:
-    name: fomo-bench_ros-net
-    driver: bridge
+    ros-net:
+        name: fomo-bench_ros-net
+        driver: bridge
