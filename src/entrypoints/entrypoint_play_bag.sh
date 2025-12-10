@@ -48,7 +48,7 @@ TOPICS=("${TOPICS[@]}" "/tf_static" "/vectornav/data_raw" "/xsens/data_raw" "/wa
 
 # Start the rosbag play with a large read-ahead queue
 # We need to start it paused to allow all data to be loaded before we can start the data processing
-ROSBAG_PLAY_COMMAND="ros2 bag play ${BAG_FILES_TO_PLAY} --clock -r${ROSBAG_PLAY_RATE} --read-ahead-queue-size 50000 -s mcap -p"
+ROSBAG_PLAY_COMMAND="ros2 bag play ${BAG_FILES_TO_PLAY} --clock -r${ROSBAG_PLAY_RATE} --read-ahead-queue-size ${ROSBAG_READ_AHEAD_QUEUE_SIZE:-1000} -s mcap -p"
 # if TOPICS is not empty, play only the topics in TOPICS
 if [ -n "$TOPICS" ]; then
     echo "Playing only the topics in TOPICS..."
