@@ -150,9 +150,6 @@ save_slam_logs() {
 
 # Start SLAM services and verify they're running
 start_slam_services() {
-    info "Performing initial cleanup..."
-    stop_containers
-
     if [[ $MAPPING_DATE == $LOCALIZATION_DATE ]]; then
         info "Setting mapping to 1"
         export IS_MAPPING=1
@@ -160,10 +157,6 @@ start_slam_services() {
         info "Setting mapping to 0"
         export IS_MAPPING=0
     fi
-
-    # Start the core services first
-    info "Starting core services..."
-    $DOCKER_COMPOSE_CMD up -d run_foxglove
 
     # Dynamically start SLAM services
     for i in "${!SLAM_IMAGES[@]}"; do
@@ -221,7 +214,7 @@ check_slam_status() {
 # Run bagfile playback
 play_bagfile() {
     info "Starting bagfile playback. This will block until finished..."
-    $DOCKER_COMPOSE_CMD up play_bag
+    $DOCKER_COMPOSE_CMD up -d play_bag
     success "Bagfile playback complete."
 }
 
@@ -269,18 +262,26 @@ eval_single_trajectory() {
     fi
 
     if [ "${RUN_SLAM:-0}" -eq 1 ]; then
+        monitoring_pids=()
+        info "Performing initial cleanup..."
+        stop_containers
+        # Start the core services first
+        info "Starting core services..."
+
+        python src/scripts/container_stats_monitor.py --name play_bag -o "$PROCESSING_PATH_BASE/stats_playbag_${MAPPING_DATE}_${LOCALIZATION_DATE}.json" &
+        monitoring_pids+=($!)
+
+        $DOCKER_COMPOSE_CMD up -d run_foxglove play_bag
+
+        info "Waiting for play_bag to load data in the message queue..."
+        sleep 120
+        # Start resource monitoring services
+        info "Starting SLAM monitoring services..."
         
         # Start SLAM services and verify they're running
         if ! start_slam_services; then
             return 1
         fi
-
-        sleep 5
-        # Start resource monitoring services
-        info "Starting SLAM monitoring services..."
-        
-        monitoring_pids=()
-
         for i in "${!SLAM_IMAGES[@]}"; do
             slam_image="${SLAM_IMAGES[$i]}"
             if [ -n "$slam_image" ]; then
@@ -292,11 +293,13 @@ eval_single_trajectory() {
             fi
         done
 
-        python src/scripts/container_stats_monitor.py --name play_bag -o "$PROCESSING_PATH_BASE/stats_playbag_${MAPPING_DATE}_${LOCALIZATION_DATE}.json" &
-        monitoring_pids+=($!)
+        # sending a resume service call
+        info "Unpausing rosbag play..."
+        $DOCKER_COMPOSE_CMD exec play_bag /bin/bash -c "source /opt/ros/humble/setup.bash && ros2 service call /rosbag2_player/resume rosbag2_interfaces/srv/Resume"
 
-        # Run bagfile playback
-        play_bagfile
+        # wait until play_bag is done
+        info "Waiting for play_bag to finish..."
+        $DOCKER_COMPOSE_CMD wait play_bag
 
         # Stop all containers
         stop_containers

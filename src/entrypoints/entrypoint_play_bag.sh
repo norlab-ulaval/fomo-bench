@@ -59,35 +59,7 @@ echo "Playing the bagfile..."
 echo $ROSBAG_PLAY_COMMAND
 
 # Start rosbag play in background
-$ROSBAG_PLAY_COMMAND &
-ROSBAG_PID=$!
-
-# Check if it started
-if ! ps -p $ROSBAG_PID > /dev/null; then
-    echo "Error: Failed to start rosbag play."
-    exit 1
-fi
-
-echo "Rosbag play started in tmux session 'rosbag_play'"
-
-# Wait for 120 seconds
-echo "Waiting 120 seconds before unpausing..."
-sleep 120
-
-# Call the ROS2 service to toggle paused
-echo "Unpausing rosbag play..."
-ros2 service call /rosbag2_player/resume rosbag2_interfaces/srv/Resume
-
-# Check if service call was successful
-if [ $? -eq 0 ]; then
-    echo "Successfully toggled pause state"
-else
-    echo "Warning: Failed to toggle pause state"
-fi
-
-# Wait for rosbag to finish
-echo "Waiting for rosbag play to complete..."
-wait $ROSBAG_PID
+$ROSBAG_PLAY_COMMAND
 ROSBAG_EXIT_CODE=$?
 
 if [ $ROSBAG_EXIT_CODE -eq 0 ]; then
