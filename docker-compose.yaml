@@ -1,122 +1,23 @@
 # This file is configured for a secure, isolated ROS network.
 
 services:
-  record_odometry_1:
-    image: ghcr.io/norlab-ulaval/fomo-bench:latest
-    init: true
-    container_name: record_odometry_1
-    hostname: record_odometry_1
-    networks:
-      - ros-net
-    # user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
-    environment:
-      # ROS2 Domain ID for network isolation
-      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
-      # ROS2 Discovery configuration
-      ROS_DISCOVERY_SERVER: ${ROS_DISCOVERY_SERVER:-}
-      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
-      # Network configuration for containerized environments
-      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
-      # Service-specific variables
-      ROS_HOME: /tmp/.ros
-      OUTPUT_FILE_NAME: ${OUTPUT_FILE_NAME}
-      OUTPUT_PATH_HOST: ${OUTPUT_PATH_HOST_1}
-      NAMESPACE: ${OUTPUT_PREFIX_SLAM_1}
-    volumes:
-      - ${OUTPUT_PATH_HOST_1:-/tmp}:/trajectory_files
-      # Optional: Share DDS configuration
-      - /dev/shm:/dev/shm
-    entrypoint: ["/app/entrypoints/entrypoint_record_odometry.sh"]
-    # Optional: IPC mode for better performance with other ROS2 containers
-    ipc: host
-
-  record_odometry_2:
-    image: ghcr.io/norlab-ulaval/fomo-bench:latest
-    init: true
-    container_name: record_odometry_2
-    hostname: record_odometry_2
-    networks:
-      - ros-net
-    # user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
-    environment:
-      # ROS2 Domain ID for network isolation
-      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
-      # ROS2 Discovery configuration
-      ROS_DISCOVERY_SERVER: ${ROS_DISCOVERY_SERVER:-}
-      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
-      # Network configuration for containerized environments
-      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
-      # Service-specific variables
-      ROS_HOME: /tmp/.ros
-      OUTPUT_FILE_NAME: ${OUTPUT_FILE_NAME}
-      OUTPUT_PATH_HOST: ${OUTPUT_PATH_HOST_2}
-      NAMESPACE: ${OUTPUT_PREFIX_SLAM_2}
-    volumes:
-      - ${OUTPUT_PATH_HOST_2:-/tmp}:/trajectory_files
-      # Optional: Share DDS configuration
-      - /dev/shm:/dev/shm
-    entrypoint: ["/app/entrypoints/entrypoint_record_odometry.sh"]
-    # Optional: IPC mode for better performance with other ROS2 containers
-    ipc: host
-
-  record_odometry_3:
-    image: ghcr.io/norlab-ulaval/fomo-bench:latest
-    init: true
-    container_name: record_odometry_3
-    hostname: record_odometry_3
-    networks:
-      - ros-net
-    # user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
-    environment:
-      # ROS2 Domain ID for network isolation
-      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
-      # ROS2 Discovery configuration
-      ROS_DISCOVERY_SERVER: ${ROS_DISCOVERY_SERVER:-}
-      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
-      # Network configuration for containerized environments
-      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
-      # Service-specific variables
-      ROS_HOME: /tmp/.ros
-      OUTPUT_FILE_NAME: ${OUTPUT_FILE_NAME}
-      OUTPUT_PATH_HOST: ${OUTPUT_PATH_HOST_3}
-      NAMESPACE: ${OUTPUT_PREFIX_SLAM_3}
-    volumes:
-      - ${OUTPUT_PATH_HOST_3:-/tmp}:/trajectory_files
-      # Optional: Share DDS configuration
-      - /dev/shm:/dev/shm
-    entrypoint: ["/app/entrypoints/entrypoint_record_odometry.sh"]
-    # Optional: IPC mode for better performance with other ROS2 containers
-    ipc: host
-
   play_bag:
+    extends:
+      file: docker-compose.common.yaml
+      service: ros-base
     image: ghcr.io/norlab-ulaval/fomo-bench:latest
     init: true
     container_name: play_bag
     hostname: play_bag
-    networks:
-      - ros-net
-    # user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
     environment:
-      # ROS2 Domain ID for network isolation
-      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
-      # ROS2 Discovery configuration
-      ROS_DISCOVERY_SERVER: ${ROS_DISCOVERY_SERVER:-}
-      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
-      # Network configuration for containerized environments
-      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
-      # Service-specific variables
       BAGFILE_PATH_HOST: ${BAGFILE_PATH_HOST}
       ROSBAG_PLAY_RATE: ${ROSBAG_PLAY_RATE}
       TOPICS_FILE: ${TOPICS_FILE}
-      ROS_HOME: /tmp/.ros
     volumes:
       - ${BAGFILE_PATH_HOST}:/rosbag_file
       - ${TOPICS_FILE}:/tmp/topics.txt
-      # Optional: Share DDS configuration
       - /dev/shm:/dev/shm
     entrypoint: ["/app/entrypoints/entrypoint_play_bag.sh"]
-    # Optional: IPC mode for better performance with other ROS2 containers
-    ipc: host
     deploy:
       resources:
         limits:
@@ -124,169 +25,23 @@ services:
           memory: 30G
 
   run_foxglove:
+    extends:
+      file: docker-compose.common.yaml
+      service: ros-base
     image: ghcr.io/norlab-ulaval/fomo-bench:latest
     init: true
     container_name: run_foxglove
     hostname: run_foxglove
-    networks:
-      - ros-net
-    # user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
     ports:
       - "8772:8772"
     environment:
-      # ROS2 Domain ID for network isolation
-      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
-      # ROS2 Discovery configuration
-      ROS_DISCOVERY_SERVER: ${ROS_DISCOVERY_SERVER:-}
-      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
-      # Network configuration for containerized environments
-      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
-      # Service-specific variables
-      ROS_HOME: /tmp/.ros
       OUTPUT_FILE_NAME: ${OUTPUT_FILE_NAME}
       OUTPUT_PATH_HOST: ${OUTPUT_PATH_HOST}
     volumes:
       - ${OUTPUT_PATH_HOST}:/trajectory_files
-      # Optional: Share DDS configuration
       - /dev/shm:/dev/shm
     entrypoint: ["/app/entrypoints/entrypoint_foxglove.sh"]
-    # Optional: IPC mode for better performance with other ROS2 containers
-    ipc: host
 
-  # run_slam_nvidia:
-  #   image: ${SLAM_IMAGE:-$CRL_SLAM_IMAGE}
-  #   container_name: run_slam_nvidia
-  #   hostname: run_slam_nvidia
-  #   networks:
-  #     - ros-net
-  #   depends_on:
-  #     roscore:
-  #       condition: service_healthy
-  #   environment:
-  #     # Explicit ROS network configuration
-  #     ROS_MASTER_URI: http://roscore:11311
-  #     ROS_HOSTNAME: run_slam_nvidia
-  #     # Service-specific variables
-  #     DISPLAY: ${DISPLAY}
-  #     NVIDIA_VISIBLE_DEVICES: all
-  #     NVIDIA_DRIVER_CAPABILITIES: compute,utility
-  #   deploy:
-  #     resources:
-  #       reservations:
-  #         devices:
-  #           - driver: nvidia
-  #             count: all
-  #             capabilities: [gpu]
-  #   volumes:
-  #     - /tmp/.X11-unix:/tmp/.X11-unix
-  #     - ${SLAM_CONFIG_OVERRIDE_FILE:-/dev/null}:/config/override.yaml
-
-  run_slam_1:
-    image: ${SLAM_IMAGE_1}
-    container_name: run_slam_1
-    hostname: run_slam_1
-    networks:
-      - ros-net
-    # user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
-    environment:
-      # ROS2 Domain ID for network isolation
-      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
-      # ROS2 Discovery configuration
-      ROS_DISCOVERY_SERVER: ${ROS_DISCOVERY_SERVER:-}
-      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
-      # Network configuration for containerized environments
-      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
-      # Service-specific variables
-      ROS_HOME: /tmp/.ros
-      IS_MAPPING: ${IS_MAPPING:-0}
-      STORAGE_PATH: /data
-      OUTPUT_PREFIX: ${OUTPUT_PREFIX_SLAM_1}
-      # Service-specific variables
-      # DISPLAY: ${DISPLAY}
-    working_dir: /data
-    volumes:
-      # - /tmp/.X11-unix:/tmp/.X11-unix
-      - ${SLAM_CONFIG_OVERRIDE_FILE:-./config/slam/override_config.yaml.example}:/config/override.yaml
-      - ${CALIB_PATH_HOST}:/calib
-      - ${PROCESSING_PATH_HOST_1:-/tmp}:/data
-      - ./ros_launchers/launch:/ros2_ws/src/ros_launchers/launch
-    deploy:
-      resources:
-        limits:
-          cpus: "3"
-          memory: 30G
-
-  run_slam_2:
-    image: ${SLAM_IMAGE_2}
-    container_name: run_slam_2
-    hostname: run_slam_2
-    networks:
-      - ros-net
-    # user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
-    environment:
-      # ROS2 Domain ID for network isolation
-      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
-      # ROS2 Discovery configuration
-      ROS_DISCOVERY_SERVER: ${ROS_DISCOVERY_SERVER:-}
-      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
-      # Network configuration for containerized environments
-      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
-      # Service-specific variables
-      ROS_HOME: /tmp/.ros
-      IS_MAPPING: ${IS_MAPPING:-0}
-      STORAGE_PATH: /data
-      OUTPUT_PREFIX: ${OUTPUT_PREFIX_SLAM_2}
-      # Service-specific variables
-      # DISPLAY: ${DISPLAY}
-    working_dir: /data
-    volumes:
-      # - /tmp/.X11-unix:/tmp/.X11-unix
-      - ${SLAM_CONFIG_OVERRIDE_FILE:-./config/slam/override_config.yaml.example}:/config/override.yaml
-      - ${CALIB_PATH_HOST}:/calib
-      - ${PROCESSING_PATH_HOST_2:-/tmp}:/data
-      - ./ros_launchers/launch:/ros2_ws/src/ros_launchers/launch
-    deploy:
-      resources:
-        limits:
-          cpus: "3"
-          memory: 30G
-
-  run_slam_3:
-    image: ${SLAM_IMAGE_3}
-    container_name: run_slam_3
-    hostname: run_slam_3
-    networks:
-      - ros-net
-    # user: "${FOMO_UID:-1000}:${FOMO_GID:-1000}"
-    environment:
-      # ROS2 Domain ID for network isolation
-      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
-      # ROS2 Discovery configuration
-      ROS_DISCOVERY_SERVER: ${ROS_DISCOVERY_SERVER:-}
-      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
-      # Network configuration for containerized environments
-      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY:-0}
-      OUTPUT_PREFIX: ${OUTPUT_PREFIX_SLAM_3}
-      # Service-specific variables
-      ROS_HOME: /tmp/.ros
-      IS_MAPPING: ${IS_MAPPING:-0}
-      STORAGE_PATH: /data
-      # Service-specific variables
-      # DISPLAY: ${DISPLAY}
-    working_dir: /data
-    volumes:
-      # - /tmp/.X11-unix:/tmp/.X11-unix
-      - ${SLAM_CONFIG_OVERRIDE_FILE:-./config/slam/override_config.yaml.example}:/config/override.yaml
-      - ${CALIB_PATH_HOST}:/calib
-      - ${PROCESSING_PATH_HOST_3:-/tmp}:/data
-      - ./ros_launchers/launch:/ros2_ws/src/ros_launchers/launch
-    deploy:
-      resources:
-        limits:
-          cpus: "3"
-          memory: 30G
-
-  # This service does not perform ROS communication, so it doesn't need network config.
   evaluate_trajectory:
     init: true
     image: ghcr.io/norlab-ulaval/fomo-bench:latest
@@ -304,7 +59,6 @@ services:
       - ${OUTPUT_PATH_HOST:-/evaluation_output}:/evaluation_output
     entrypoint: ["/app/entrypoints/entrypoint_evaluate.sh"]
 
-  # This service does not perform ROS communication, so it doesn't need network config.
   plot_confusion_matrix:
     init: true
     image: ghcr.io/norlab-ulaval/fomo-bench:latest
@@ -316,7 +70,9 @@ services:
     volumes:
       - ${OUTPUT_PATH_HOST:-/evaluation_output}:/evaluation_output
     entrypoint: ["/app/entrypoints/entrypoint_plot_confusion_matrix.sh"]
+
 # Define the custom bridge network for isolated ROS communication.
 networks:
   ros-net:
+    name: fomo-bench_ros-net
     driver: bridge
