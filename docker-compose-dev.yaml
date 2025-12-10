@@ -14,7 +14,17 @@ services:
       context: .
     image: fomo-bench:latest
 
-  record_odometry:
+  record_odometry_1:
+    build:
+      context: .
+    image: fomo-bench:latest
+
+  record_odometry_2:
+    build:
+      context: .
+    image: fomo-bench:latest
+
+  record_odometry_3:
     build:
       context: .
     image: fomo-bench:latest
