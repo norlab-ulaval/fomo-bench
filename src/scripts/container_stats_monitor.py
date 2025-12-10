@@ -48,6 +48,7 @@ def get_container_stats(container_name):
 
 def log_stats(container_name: str, output_path: Path):
     stats_list = []
+    err_ctr = 0
 
     while True:
         stats = get_container_stats(container_name)
@@ -60,6 +61,13 @@ def log_stats(container_name: str, output_path: Path):
             # Write to file after each collection
             with open(output_path, "w") as f:
                 json.dump(stats_list, f, indent=2)
+        else:
+            err_ctr += 1
+            if err_ctr > 5:
+                print(
+                    f"Failed to get stats for {container_name} after 5 attempts. Stopping."
+                )
+                break
 
         time.sleep(0.5)
 
