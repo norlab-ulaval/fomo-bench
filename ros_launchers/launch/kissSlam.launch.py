@@ -45,6 +45,19 @@ def generate_launch_description():
             executable="kiss_slam_node",
             name="kiss_slam_node",
             output="screen",
+            sigterm_timeout="60",  # Wait 30 seconds before escalating to SIGTERM
+            sigkill_timeout="10",  # Wait 5 more seconds before SIGKILL
+            arguments=[
+                "--ros-args",
+                "--log-level",
+                "debug",
+                "--log-level",
+                "rcl:=INFO",
+                "--log-level",
+                "rmw_fastrtps_cpp:=INFO",
+                "--log-level",
+                "rclcpp:=INFO",
+            ],
             parameters=[
                 {
                     "points_topic": f"{LIDAR_TYPE}/points",
