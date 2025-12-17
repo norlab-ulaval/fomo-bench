@@ -1,0 +1,50 @@
+FROM ros:humble-ros-base
+
+SHELL ["/bin/bash", "-c"]
+
+# Fix for Hash Sum mismatch error
+# from this link https://stackoverflow.com/questions/67732260/how-to-fix-hash-sum-mismatch-in-docker-on-mac
+RUN echo "Acquire::http::Pipeline-Depth 0;" > /etc/apt/apt.conf.d/99custom && \
+    echo "Acquire::http::No-Cache true;" >> /etc/apt/apt.conf.d/99custom && \
+    echo "Acquire::BrokenProxy    true;" >> /etc/apt/apt.conf.d/99custom
+
+RUN rm -rf /var/lib/apt/lists/*
+RUN apt clean\
+    && apt update \
+    && apt upgrade -y \
+    && apt install -y \
+    python3-pip curl git \
+    && apt clean
+#     build-essential \
+#     clang cmake \
+#     g++ gcc gdb git \
+#     fuse \
+#     libomp-dev libboost-all-dev libeigen3-dev libyaml-cpp-dev \
+#     python3-pip \
+#     curl gnupg lsb-release \
+#     ros-humble-robot-localization \
+#     && apt clean
+
+RUN python3 -m pip install kiss-slam
+
+WORKDIR /
+
+# create ros workspace and other folders
+RUN mkdir -p /ros2_ws/src
+
+RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+RUN git clone https://github.com/norlab-ulaval/kiss-slam.git /ros2_ws/src/kiss-slam
+RUN git clone https://github.com/norlab-ulaval/kiss-icp.git /ros2_ws/src/kiss-icp
+RUN git clone https://github.com/norlab-ulaval/fomo-bench.git /tmp/fomo-bench \
+    && mv /tmp/fomo-bench/ros_launchers /ros2_ws/src/ros_launchers
+
+RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+RUN rosdep update
+RUN rosdep install --from-paths /ros2_ws/src --ignore-src -r -y
+RUN cd /ros2_ws/ \
+    && source /opt/ros/humble/setup.bash \
+    && colcon build --symlink-install
+
+STOPSIGNAL SIGINT
+# add additional commands here
+CMD ["/bin/bash", "-c", "source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && ros2 launch --noninteractive ros_launchers kissSlam.launch.py"]
