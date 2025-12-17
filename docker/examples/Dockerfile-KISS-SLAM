@@ -14,6 +14,9 @@ RUN apt clean\
     && apt upgrade -y \
     && apt install -y \
     python3-pip curl git \
+    libgl1-mesa-glx \
+    ros-humble-rosbag2-storage-mcap \
+    ros-humble-foxglove-bridge \
     && apt clean
 #     build-essential \
 #     clang cmake \
@@ -35,7 +38,7 @@ RUN mkdir -p /ros2_ws/src
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
 RUN git clone https://github.com/norlab-ulaval/kiss-slam.git /ros2_ws/src/kiss-slam
 RUN git clone https://github.com/norlab-ulaval/kiss-icp.git /ros2_ws/src/kiss-icp
-RUN git clone https://github.com/norlab-ulaval/fomo-bench.git /tmp/fomo-bench \
+RUN git clone https://github.com/norlab-ulaval/fomo-bench.git -b feat/kiss-slam /tmp/fomo-bench \
     && mv /tmp/fomo-bench/ros_launchers /ros2_ws/src/ros_launchers
 
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
