@@ -48,6 +48,7 @@ RUN cd /ros2_ws/ \
     && source /opt/ros/humble/setup.bash \
     && colcon build --symlink-install
 
+RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
 STOPSIGNAL SIGINT
 # add additional commands here
 CMD ["/bin/bash", "-c", "source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && ros2 launch --noninteractive ros_launchers kissSlam.launch.py"]
