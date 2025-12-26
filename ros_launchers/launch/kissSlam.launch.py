@@ -10,6 +10,7 @@ from launch_ros.actions import Node
 IS_MAPPING = os.getenv("IS_MAPPING")
 STORAGE_PATH = os.getenv("STORAGE_PATH")
 LIDAR_TYPE = "robosense"
+NAMESPACE = os.getenv("NAMESPACE")
 
 if IS_MAPPING is None:
     print("IS_MAPPING is not set")
@@ -44,6 +45,7 @@ def generate_launch_description():
             package="kiss_slam_ros",
             executable="kiss_slam_node",
             name="kiss_slam_node",
+            namespace=NAMESPACE,
             output="screen",
             sigterm_timeout="30",  # Wait 30 seconds before escalating to SIGTERM
             sigkill_timeout="10",  # Wait 5 more seconds before SIGKILL
@@ -60,7 +62,7 @@ def generate_launch_description():
             ],
             parameters=[
                 {
-                    "points_topic": f"{LIDAR_TYPE}/points",
+                    "points_topic": f"/{LIDAR_TYPE}/points",
                     "use_sim_time": LaunchConfiguration("use_sim_time"),
                     "final_map_file_name": output_map_name,
                     "final_trajectory_file_name": f"{STORAGE_PATH}/trajectory.txt",
@@ -74,6 +76,7 @@ def generate_launch_description():
             package="kiss_icp",
             executable="kiss_icp_node",
             name="kiss_icp_node",
+            namespace=NAMESPACE,
             output="screen",
             sigterm_timeout="30",  # Wait 30 seconds before escalating to SIGTERM
             sigkill_timeout="10",  # Wait 5 more seconds before SIGKILL
@@ -89,8 +92,8 @@ def generate_launch_description():
                 "rclcpp:=INFO",
             ],
             remappings=[
-                ("pointcloud_topic", f"{LIDAR_TYPE}/points"),
-                ("kiss/odometry", "/estimated_odom"),
+                ("pointcloud_topic", f"/{LIDAR_TYPE}/points"),
+                ("kiss/odometry", "estimated_odom"),
             ],
             parameters=[
                 {
