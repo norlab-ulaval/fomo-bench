@@ -54,5 +54,5 @@ int main(int argc, char** argv)
 
 
 ## Published topics
-Your solution must publish on `/estimated_odom`, `/estimated_pose` or `estimated_pose_covariance` topics.
+Your solution must publish on `/estimated_odom`, `/estimated_pose` or `/estimated_pose_covariance` topics.
 Alternatively, if your solution performs optimization of the previously estimated poses, e.g. through graph optimization, you can also save the final estimated trajectory to a file. This file must follow the [tum](https://cvg.cit.tum.de/data/datasets/rgbd-dataset/file_formats) format and be saved to: `$STORAGE_PATH/trajectory.txt`.
