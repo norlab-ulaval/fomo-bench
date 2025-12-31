@@ -34,21 +34,28 @@ stop_containers() {
     for i in "${!SLAM_IMAGES[@]}"; do
         slam_image="${SLAM_IMAGES[$i]}"
         slam_label=$(generate_slam_label "$slam_image")
-        
+
         # Export variables for this specific SLAM instance
         export SLAM_IMAGE="$slam_image"
         export SLAM_LABEL="$slam_label"
-        
+
         if [ -n "$slam_image" ]; then
             slam_label=$(generate_slam_label "$slam_image")
             docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml stop
         fi
     done
-    
+
     # Use the determined DOCKER_COMPOSE_CMD to ensure consistency
     ${DOCKER_COMPOSE_CMD:-docker compose} stop
     success "Stopping complete."
 }
+
+# Function to be called on script exit or interruption (Ctrl+C)
+cleanup_exit() {
+    info "Received signal to exit from: ${BASH_SOURCE[1]}:${BASH_LINENO[0]}. Calling cleanup"
+    cleanup
+}
+
 
 # Function to be called on script exit or interruption (Ctrl+C)
 cleanup() {
@@ -92,7 +99,7 @@ init_pipeline() {
     fi
 
     # Set a trap to run the cleanup function on EXIT signal
-    trap cleanup EXIT
+    trap cleanup_exit EXIT
 }
 
 # Clean up previous run and prepare output directory
@@ -140,10 +147,10 @@ save_slam_logs() {
         slam_image="${SLAM_IMAGES[$i]}"
         if [ -n "$slam_image" ]; then
             slam_label=$(generate_slam_label "$slam_image")
-            
+
             # Determine processing path for this index
             proc_path="$PROCESSING_PATH_BASE/$slam_label/$MAPPING_DATE"
-            
+
             docker logs "run_slam_${slam_label}" > "${proc_path}/run_slam_${LOCALIZATION_DATE}.log" 2>/dev/null || true
         fi
     done
@@ -162,7 +169,7 @@ start_slam_services() {
     # Dynamically start SLAM services
     for i in "${!SLAM_IMAGES[@]}"; do
         slam_image="${SLAM_IMAGES[$i]}"
-        
+
         if [ -n "$slam_image" ]; then
             slam_label=$(generate_slam_label "$slam_image")
             info "Starting SLAM service $((i+1)): $slam_image (Label: $slam_label)"
@@ -170,17 +177,17 @@ start_slam_services() {
             # Export variables for this specific SLAM instance
             export SLAM_IMAGE="$slam_image"
             export SLAM_LABEL="$slam_label"
-            
+
             # Determine output paths
             export OUTPUT_PATH_HOST="${OUTPUT_PATH_HOST_BASE}/${SLAM_LABEL}"
             export PROCESSING_PATH_HOST="${PROCESSING_PATH_BASE}/${SLAM_LABEL}/${MAPPING_DATE}"
-            
+
             # Create directories
             mkdir -p "$OUTPUT_PATH_HOST"
             mkdir -p "$PROCESSING_PATH_HOST"
 
             # Launch the SLAM pair as a separate project
-            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml up -d --force-recreate
+            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml up -d --force-recreate --remove-orphans
         fi
     done
 
@@ -261,7 +268,7 @@ wait_for_message_queue() {
     prev_mem=""
     while true; do
         current_mem=$(docker stats play_bag --no-stream --format '{{.MemUsage}}' | cut -d'/' -f1 | sed 's/[^0-9.]//g')
-        
+
         if [ -n "$prev_mem" ]; then
             # Calculate relative change percentage
             change=$(awk -v curr="$current_mem" -v prev="$prev_mem" 'BEGIN {
@@ -272,9 +279,9 @@ wait_for_message_queue() {
                     print 0
                 }
             }')
-            
+
             echo -ne "\rMemory usage of play_bag: $(docker stats play_bag --no-stream --format '{{.MemUsage}}') | Change: ${change}%    "
-            
+
             # Check if absolute change is less than 1%
             abs_change=$(awk -v c="$change" 'BEGIN {print (c < 0 ? -c : c)}')
             if (( $(awk -v a="$abs_change" 'BEGIN {print (a < 1 ? 1 : 0)}') )); then
@@ -283,7 +290,7 @@ wait_for_message_queue() {
         else
             echo -ne "\rMemory usage of play_bag: $(docker stats play_bag --no-stream --format '{{.MemUsage}}') | Change: N/A    "
         fi
-        
+
         prev_mem=$current_mem
         sleep 1
     done
@@ -294,12 +301,17 @@ wait_for_message_queue() {
 
 # Function to run the pipeline for a given trajectory
 eval_single_trajectory() {
+    # Reload environment variables from .env
+    set -o allexport
+    source .env
+    set +o allexport
+
     export BAGFILE_PATH_HOST=$1
     export CALIB_PATH_HOST=$1/calib
     export OUTPUT_FILE_NAME="${2}_${3}.txt" # name of the recorded odometry file
 
     export REFERENCE_TRAJECTORY_FILE_HOST=$1/gt.txt
-    
+
     # Store base output path and processing path
     export OUTPUT_PATH_HOST_BASE=$OUTPUT_PATH_HOST
     export PROCESSING_PATH_BASE=$PROCESSING_PATH_BASE # Already set in .env usually
@@ -326,12 +338,13 @@ eval_single_trajectory() {
         python3 src/scripts/container_stats_monitor.py --name play_bag -o "$PROCESSING_PATH_BASE/stats_playbag_${MAPPING_DATE}_${LOCALIZATION_DATE}.json" &
         monitoring_pids+=($!)
 
+        info "Loading $LOCALIZATION_DATE rosbag"
         $DOCKER_COMPOSE_CMD up -d run_foxglove play_bag
         wait_for_message_queue
 
         # Start resource monitoring services
         info "Starting SLAM monitoring services..."
-        
+
         # Start SLAM services and verify they're running
         if ! start_slam_services; then
             return 1
@@ -341,13 +354,14 @@ eval_single_trajectory() {
             if [ -n "$slam_image" ]; then
                 slam_label=$(generate_slam_label "$slam_image")
                 stats_path="$PROCESSING_PATH_BASE/$slam_label/$MAPPING_DATE/stats_${LOCALIZATION_DATE}.json"
-                
+
                 python src/scripts/container_stats_monitor.py --name "run_slam_${slam_label}" -o "$stats_path" &
                 monitoring_pids+=($!)
             fi
         done
 
         # sending a resume service call
+        # TODO this sometimes fails
         info "Unpausing rosbag play..."
         $DOCKER_COMPOSE_CMD exec play_bag /bin/bash -c "source /opt/ros/humble/setup.bash && ros2 service call /rosbag2_player/resume rosbag2_interfaces/srv/Resume"
 
@@ -366,7 +380,7 @@ eval_single_trajectory() {
 
         # Any container output should be saved at this point
         save_slam_logs
-        
+
         cleanup
 
         # Trajectory file handling
@@ -376,11 +390,11 @@ eval_single_trajectory() {
                 slam_label=$(generate_slam_label "$slam_image")
                 proc_path="$PROCESSING_PATH_BASE/$slam_label/$MAPPING_DATE"
                 est_path="$OUTPUT_PATH_HOST_BASE/$slam_label/$OUTPUT_FILE_NAME"
-                
+
                 if [ -f "${proc_path}/trajectory.txt" ]; then
                     info "Method $slam_label generated a final trajectory file, replacing existing one..."
                     mv "$est_path" "${est_path}_bak" 2>/dev/null || true
-                    cp "${proc_path}/trajectory.txt" "$est_path"
+                    mv "${proc_path}/trajectory.txt" "$est_path"
                 fi
             fi
         done

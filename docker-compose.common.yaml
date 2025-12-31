@@ -38,5 +38,5 @@ services:
         deploy:
             resources:
                 limits:
-                    cpus: "10"
-                    memory: 25G
+                    cpus: ${SLAM_CPU_LIMIT}
+                    memory: ${SLAM_RAM_LIMIT}
