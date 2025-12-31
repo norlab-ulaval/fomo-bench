@@ -6,21 +6,11 @@ FROM ubuntu:22.04
 #   --build-arg GROUPID=$(id -g) \
 #   --build-arg USERNAME=$(whoami) \
 #   --build-arg HOMEDIR=${HOME} .
-ARG GROUPID=0
-ARG USERID=0
-ARG USERNAME=root
-ARG HOMEDIR=/root
-
-RUN if [ ${GROUPID} -ne 0 ]; then addgroup --gid ${GROUPID} ${USERNAME}; fi \
-  && if [ ${USERID} -ne 0 ]; then adduser --disabled-password --gecos '' --uid ${USERID} --gid ${GROUPID} ${USERNAME}; fi
 
 # Default number of threads for make build
 ARG NUMPROC=12
 
 ENV DEBIAN_FRONTEND=noninteractive
-
-## Switch to specified user to create directories
-USER ${USERID}:${GROUPID}
 
 ENV VTRROOT=${HOMEDIR}/ASRL/vtr3
 ENV VTRSRC=${VTRROOT}/src \
@@ -33,9 +23,6 @@ ENV VTRUI=${VTRSRC}/main/src/vtr_gui/vtr_gui/vtr-gui
 
 RUN echo "alias build_ui='npm --prefix ${VTRUI} install ${VTRUI}; npm --prefix ${VTRUI} run build'" >> ~/.bashrc
 RUN echo "alias build_vtr='source /opt/ros/humble/setup.bash; cd ${VTRSRC}/main; colcon build --symlink-install'" >> ~/.bashrc
-
-## Switch to root to install dependencies
-USER 0:0
 
 ## Dependencies
 RUN apt update && apt upgrade -q -y
@@ -140,9 +127,6 @@ RUN cd ${HOMEDIR}/.casadi \
 ENV PYTHONPATH=${PYTHONPATH}:/usr/local
 ENV LD_LIBRARY_PATH=/usr/local/casadi:${LD_LIBRARY_PATH}
 
-## Switch to specified user
-USER ${USERID}:${GROUPID}
-
 SHELL ["/bin/bash", "-c"]
 
 RUN git clone --recurse-submodules --branch fomo-eval https://github.com/utiasASRL/vtr3.git $VTRSRC
@@ -152,7 +136,7 @@ RUN git clone https://github.com/utiasASRL/fomo_rtr_wrapper.git $VTRSRC/main/src
 RUN touch $VTRSRC/main/src/deps/gpusurf/COLCON_IGNORE
 
 
-ENV MAKEFLAGS="-j3"
+ENV MAKEFLAGS="-j12"
 ENV VTR_PIPELINE=RADAR
 
 RUN source /opt/ros/humble/setup.bash && cd $VTRSRC/main && colcon build --symlink-install
