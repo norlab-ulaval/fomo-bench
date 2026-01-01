@@ -1,0 +1,75 @@
+FROM ros:humble-ros-base
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    wget \
+    curl \
+    vim \
+    gdb \
+    clang \
+    clang-format \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PCL and other specific dependencies if not included in desktop
+RUN apt-get update && apt-get install -y \
+    libpcl-dev \
+    libopencv-dev \
+    libceres-dev \
+    libgoogle-glog-dev \
+    libboost-all-dev \
+    ros-humble-pcl-conversions \
+    ros-humble-tf2-eigen \
+    ros-humble-rosbag2-storage-mcap \
+    ros-humble-cv-bridge \
+    ros-humble-image-transport \
+    ros-humble-foxglove-bridge \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN cd /opt && git clone https://github.com/borglab/gtsam.git -b 4.2 \
+    && cd gtsam \
+    && mkdir build \
+    && cd build \
+    && cmake .. \
+    && make install
+
+RUN git clone https://bitbucket.org/norlab/navtech_driver.git /navtech_driver \
+    && mkdir -p /tmp/build_ws/src \
+    && mv /navtech_driver/ros/ros2/src/navtech_msgs /tmp/build_ws/src/navtech_msgs \
+    && rm -rf /navtech_driver \
+    && cd /tmp/build_ws \
+    && . /opt/ros/humble/setup.sh \
+    && colcon build --install-base /opt/ros/humble --merge-install \
+    && rm -rf /tmp/build_ws
+
+RUN apt-get update && apt-get install -y curl gnupg2 lsb-release
+RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add -
+RUN echo "deb http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/ros2.list
+RUN apt-get update
+
+RUN mkdir -p /ros2_ws/src
+
+RUN cd /ros2_ws/src \
+    && git clone -b ros2 https://github.com/norlab-ulaval/navtech-radar-slam.git \
+    && cd navtech-radar-slam && sed -i 's|git@github.com:|https://github.com/|g' .gitmodules \
+    && git submodule init && git submodule update
+
+RUN git clone https://github.com/norlab-ulaval/fomo-bench.git -b parallel-evaluation /tmp/fomo-bench \
+    && mv /tmp/fomo-bench/ros_launchers /ros2_ws/src/ros_launchers
+
+RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+RUN rosdep update
+RUN apt update
+RUN rosdep install --from-paths /ros2_ws/src --ignore-src -r -y
+
+RUN echo "/usr/local/lib" | tee /etc/ld.so.conf.d/local.conf && \
+    ldconfig
+RUN . /opt/ros/humble/setup.sh && cd /ros2_ws && colcon build --symlink-install
+
+WORKDIR /
+STOPSIGNAL SIGINT
+
+CMD ["/bin/bash", "-c", "cd /data && source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && ros2 launch --noninteractive ros_launchers navtechRadarSlam.launch.py"]
