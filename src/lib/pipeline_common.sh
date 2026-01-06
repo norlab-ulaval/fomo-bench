@@ -329,73 +329,95 @@ eval_single_trajectory() {
     fi
 
     if [ "${RUN_SLAM:-0}" -eq 1 ]; then
-        monitoring_pids=()
-        info "Performing initial cleanup..."
-        stop_containers
-        # Start the core services first
-        info "Starting core services..."
+        local max_retries=1
+        local retry_count=0
+        
+        while true; do
+            monitoring_pids=()
+            info "Performing initial cleanup..."
+            stop_containers
+            # Start the core services first
+            info "Starting core services..."
 
-        python3 src/scripts/container_stats_monitor.py --name play_bag -o "$PROCESSING_PATH_BASE/stats_playbag_${MAPPING_DATE}_${LOCALIZATION_DATE}.json" &
-        monitoring_pids+=($!)
+            python3 src/scripts/container_stats_monitor.py --name play_bag -o "$PROCESSING_PATH_BASE/stats_playbag_${MAPPING_DATE}_${LOCALIZATION_DATE}.json" &
+            monitoring_pids+=($!)
 
-        info "Loading $LOCALIZATION_DATE rosbag"
-        $DOCKER_COMPOSE_CMD up -d run_foxglove play_bag
-        wait_for_message_queue
+            info "Loading $LOCALIZATION_DATE rosbag"
+            $DOCKER_COMPOSE_CMD up -d run_foxglove play_bag
+            wait_for_message_queue
 
-        # Start resource monitoring services
-        info "Starting SLAM monitoring services..."
+            # Start resource monitoring services
+            info "Starting SLAM monitoring services..."
 
-        # Start SLAM services and verify they're running
-        if ! start_slam_services; then
-            return 1
-        fi
-        for i in "${!SLAM_IMAGES[@]}"; do
-            slam_image="${SLAM_IMAGES[$i]}"
-            if [ -n "$slam_image" ]; then
-                slam_label=$(generate_slam_label "$slam_image")
-                stats_path="$PROCESSING_PATH_BASE/$slam_label/$MAPPING_DATE/stats_${LOCALIZATION_DATE}.json"
-
-                python src/scripts/container_stats_monitor.py --name "run_slam_${slam_label}" -o "$stats_path" &
-                monitoring_pids+=($!)
+            # Start SLAM services and verify they're running
+            if ! start_slam_services; then
+                return 1
             fi
-        done
+            for i in "${!SLAM_IMAGES[@]}"; do
+                slam_image="${SLAM_IMAGES[$i]}"
+                if [ -n "$slam_image" ]; then
+                    slam_label=$(generate_slam_label "$slam_image")
+                    stats_path="$PROCESSING_PATH_BASE/$slam_label/$MAPPING_DATE/stats_${LOCALIZATION_DATE}.json"
 
-        # sending a resume service call
-        # TODO this sometimes fails
-        info "Unpausing rosbag play..."
-        $DOCKER_COMPOSE_CMD exec play_bag /bin/bash -c "source /opt/ros/humble/setup.bash && ros2 service call /rosbag2_player/resume rosbag2_interfaces/srv/Resume"
-
-        # wait until play_bag is done
-        info "Waiting for play_bag to finish..."
-        $DOCKER_COMPOSE_CMD wait play_bag
-
-        # Stop all containers
-        stop_containers
-
-        # Stop all monitoring services
-        for pid in "${monitoring_pids[@]}"; do
-            kill "$pid" 2>/dev/null || true
-        done
-        info "All monitoring services terminated"
-
-        # Any container output should be saved at this point
-        save_slam_logs
-
-        cleanup
-
-        # Trajectory file handling
-       for i in "${!SLAM_IMAGES[@]}"; do
-            slam_image="${SLAM_IMAGES[$i]}"
-            if [ -n "$slam_image" ]; then
-                slam_label=$(generate_slam_label "$slam_image")
-                proc_path="$PROCESSING_PATH_BASE/$slam_label/$MAPPING_DATE"
-                est_path="$OUTPUT_PATH_HOST_BASE/$slam_label/$OUTPUT_FILE_NAME"
-
-                if [ -f "${proc_path}/trajectory.txt" ]; then
-                    info "Method $slam_label generated a final trajectory file, replacing existing one..."
-                    mv "$est_path" "${est_path}_bak" 2>/dev/null || true
-                    mv "${proc_path}/trajectory.txt" "$est_path"
+                    python src/scripts/container_stats_monitor.py --name "run_slam_${slam_label}" -o "$stats_path" &
+                    monitoring_pids+=($!)
                 fi
+            done
+
+            # sending a resume service call
+            info "Unpausing rosbag play..."
+            if $DOCKER_COMPOSE_CMD exec play_bag /bin/bash -c "source /opt/ros/humble/setup.bash && ros2 service call /rosbag2_player/resume rosbag2_interfaces/srv/Resume"; then
+                # wait until play_bag is done
+                info "Waiting for play_bag to finish..."
+                $DOCKER_COMPOSE_CMD wait play_bag
+
+                # Stop all containers
+                stop_containers
+
+                # Stop all monitoring services
+                for pid in "${monitoring_pids[@]}"; do
+                    kill "$pid" 2>/dev/null || true
+                done
+                info "All monitoring services terminated"
+
+                # Any container output should be saved at this point
+                save_slam_logs
+
+                cleanup
+
+                # Trajectory file handling
+                for i in "${!SLAM_IMAGES[@]}"; do
+                        slam_image="${SLAM_IMAGES[$i]}"
+                        if [ -n "$slam_image" ]; then
+                            slam_label=$(generate_slam_label "$slam_image")
+                            proc_path="$PROCESSING_PATH_BASE/$slam_label/$MAPPING_DATE"
+                            est_path="$OUTPUT_PATH_HOST_BASE/$slam_label/$OUTPUT_FILE_NAME"
+
+                            if [ -f "${proc_path}/trajectory.txt" ]; then
+                                info "Method $slam_label generated a final trajectory file, replacing existing one..."
+                                mv "$est_path" "${est_path}_bak" 2>/dev/null || true
+                                mv "${proc_path}/trajectory.txt" "$est_path"
+                            fi
+                        fi
+                done
+                break
+            else
+                error "Resume command failed."
+                
+                # Cleanup before retry
+                stop_containers
+                for pid in "${monitoring_pids[@]}"; do
+                    kill "$pid" 2>/dev/null || true
+                done
+                
+                if [ $retry_count -ge $max_retries ]; then
+                     error "Max retries reached. Aborting evaluation for this trajectory."
+                     return 1
+                fi
+                
+                retry_count=$((retry_count+1))
+                info "Retrying evaluation... (Attempt $((retry_count+1)))"
+                sleep 5
             fi
         done
     fi
