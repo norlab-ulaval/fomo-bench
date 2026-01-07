@@ -4,7 +4,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source the common functions
-source "${SCRIPT_DIR}/src/lib/pipeline_common.sh" 
+source "${SCRIPT_DIR}/src/lib/pipeline_common.sh"
 
 # --- Seasons-specific Functions ---
 
@@ -15,12 +15,12 @@ generate_trajectory_path() {
     current_folder=$(pwd)
     deployment_path=$base_path/${deployment_folder}
     if [ ! -d "$deployment_path" ]; then
-        return 1
+        return 0
     fi
     cd $deployment_path
     local folder=$(ls -d $trajectory_name* 2>/dev/null | head -n 1)
     cd $current_folder
-    
+
     if [[ -n "${folder}" ]]; then
         echo "${base_path}/${deployment_folder}/${folder}"
     fi
@@ -67,7 +67,7 @@ get_trajectory_rosbag() {
         if [ -d "$trajectory_folder_remote" ]; then
             # verify that there is enough space on the host
             trajectory_destination_host="$BASE_PATH_HOST/$deployment_folder/"
-            verify_free_space $trajectory_folder_remote $trajectory_destination_host  
+            verify_free_space $trajectory_folder_remote $trajectory_destination_host
 
             info "Copying trajectory folder from $trajectory_folder_remote to $trajectory_destination_host"
             # copy the trajectory folder to the host
@@ -89,10 +89,11 @@ get_trajectory_rosbag() {
         info "Generating trajectory rosbag for deployment: $deployment_folder and trajectory: $trajectory_name"
         trajectory_folder_host="$BASE_PATH_HOST/$deployment_folder/$(basename $human_readable_folder_remote)"
         trajectory_destination_remote="$BASE_PATH_REMOTE/mcap/$deployment_folder/"
-        mkdir -p $trajectory_folder_host
 
         # verify that there is enough space on the host
-        verify_free_space $human_readable_folder_remote $trajectory_folder_host 
+        verify_free_space $human_readable_folder_remote $trajectory_folder_host
+        mkdir -p $trajectory_folder_host
+
         info "Converting plaintext trajectory to mcap"
         docker run --rm -t \
             -v $human_readable_folder_remote:/input \
@@ -120,7 +121,7 @@ get_trajectory_rosbag() {
         fi
         trajectory_folder_host="$BASE_PATH_HOST/$deployment_folder/$(basename $human_readable_folder_remote)"
     fi
-    
+
     echo $trajectory_folder_host
     return 0
 }
