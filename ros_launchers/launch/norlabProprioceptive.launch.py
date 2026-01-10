@@ -8,6 +8,7 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 IMU_TYPE = "vectornav"  # or 'xsens'
+NAMESPACE = os.getenv("NAMESPACE", "")
 
 
 def generate_launch_description():
@@ -32,6 +33,7 @@ def generate_launch_description():
         package="norlab_imu_tools",
         executable="imu_and_wheel_odom_node",
         name="imu_and_wheel_odom_node",
+        namespace=NAMESPACE,
         output="log",
         respawn=True,
         parameters=[
@@ -44,6 +46,7 @@ def generate_launch_description():
             ("imu_topic", f"{IMU_TYPE}/data"),
             ("wheel_odom_topic", "/warthog/platform/odom"),
             ("imu_and_wheel_odom", "estimated_odom"),
+            ("/tf", f"/{NAMESPACE}/tf"),
         ],
         arguments=[
             "--ros-args",
