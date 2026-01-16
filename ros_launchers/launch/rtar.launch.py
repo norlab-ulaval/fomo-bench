@@ -1,13 +1,12 @@
+import json
 import os
 import os.path as osp
-import json
 
-
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch import LaunchDescription
 from launch_ros.actions import Node
-from ament_index_python.packages import get_package_share_directory
 
 NAMESPACE = os.getenv("NAMESPACE")
 
@@ -24,7 +23,7 @@ def generate_launch_description():
     }
 
     INPUT_IMU_BIAS_FILE = os.path.join("/", "calib", "imu.json")
-    IMU_TYPE = "vectornav"  # or 'xsens'
+    IMU_TYPE = os.getenv("IMU_TYPE", "vectornav")  # or 'xsens'
 
     bias_z = 0.0
     if os.path.exists(INPUT_IMU_BIAS_FILE):
@@ -56,8 +55,8 @@ def generate_launch_description():
                         "robot_frame": "base_link",
                         "radar_frame": "navtech",
                         "radar_topic": "/navtech/b_scan_msg",
-                        "gyro_frame": "vectornav",
-                        "gyro_topic": "/vectornav/data_raw",
+                        "gyro_frame": IMU_TYPE,
+                        "gyro_topic": f"/{IMU_TYPE}/data_raw",
                         "log_enabled": [
                             "mission.state_machine",
                             "pose_graph",

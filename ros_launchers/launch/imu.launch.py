@@ -8,7 +8,7 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 INPUT_IMU_BIAS_FILE = os.path.join("/", "calib", "imu.json")
-IMU_TYPE = "vectornav"  # or 'xsens'
+IMU_TYPE = os.getenv("IMU_TYPE", "vectornav")  # or 'xsens'
 
 NAMESPACE = os.getenv("NAMESPACE")
 
@@ -36,64 +36,60 @@ def generate_launch_description():
     else:
         print("No bias file found, using default values")
 
-    config_file = os.path.join(share_folder, "config", f"_{IMU_TYPE}.yaml")
+    config_file = os.path.join(share_folder, "config", "_imu.yaml")
 
-    if IMU_TYPE == "vectornav":
-        bias_compensator_node = Node(
-            package="norlab_imu_tools",
-            executable="imu_bias_compensator_node",
-            name="bias_compensator",
-            namespace=NAMESPACE,
-            parameters=[
-                config_file,
-                {
-                    "use_sim_time": LaunchConfiguration("use_sim_time"),
-                    "bias_x": bias_x,
-                    "bias_y": bias_y,
-                    "bias_z": bias_z,
-                },
-            ],
-            remappings=[
-                ("imu_topic_in", f"/{IMU_TYPE}/data_raw"),
-                ("bias_topic_in", f"/{IMU_TYPE}/bias"),
-                ("imu_topic_out", f"{IMU_TYPE}/data_unbiased"),
-                ("/tf", "tf"),
-            ],
-            arguments=[
-                "--ros-args",
-                "--log-level",
-                "warn",
-            ],
-        )
+    bias_compensator_node = Node(
+        package="norlab_imu_tools",
+        executable="imu_bias_compensator_node",
+        name="bias_compensator",
+        namespace=NAMESPACE,
+        parameters=[
+            config_file,
+            {
+                "use_sim_time": LaunchConfiguration("use_sim_time"),
+                "bias_x": bias_x,
+                "bias_y": bias_y,
+                "bias_z": bias_z,
+            },
+        ],
+        remappings=[
+            ("imu_topic_in", f"/{IMU_TYPE}/data_raw"),
+            ("bias_topic_in", f"/{IMU_TYPE}/bias"),
+            ("imu_topic_out", f"{IMU_TYPE}/data_unbiased"),
+            ("/tf", "tf"),
+        ],
+        arguments=[
+            "--ros-args",
+            "--log-level",
+            "warn",
+        ],
+    )
 
-        filter_madgwick_node = Node(
-            package="imu_filter_madgwick",
-            executable="imu_filter_madgwick_node",
-            name="madgwick_filter",
-            namespace=NAMESPACE,
-            output="both",
-            parameters=[
-                config_file,
-                {
-                    "use_sim_time": LaunchConfiguration("use_sim_time"),
-                },
-            ],
-            remappings=[
-                ("imu/data_raw", f"{IMU_TYPE}/data_unbiased"),
-                ("imu/mag", f"{IMU_TYPE}/mag"),
-                ("imu/data", f"{IMU_TYPE}/data"),
-                ("/tf", "tf"),
-            ],
-            arguments=[
-                "--ros-args",
-                "--log-level",
-                "warn",
-            ],
-        )
-        ld.add_action(bias_compensator_node)
-        ld.add_action(filter_madgwick_node)
-
-    elif IMU_TYPE == "xsens":
-        raise NotImplementedError("xsens IMU is not yet supported")
+    filter_madgwick_node = Node(
+        package="imu_filter_madgwick",
+        executable="imu_filter_madgwick_node",
+        name="madgwick_filter",
+        namespace=NAMESPACE,
+        output="both",
+        parameters=[
+            config_file,
+            {
+                "use_sim_time": LaunchConfiguration("use_sim_time"),
+            },
+        ],
+        remappings=[
+            ("imu/data_raw", f"{IMU_TYPE}/data_unbiased"),
+            ("imu/mag", f"{IMU_TYPE}/mag"),
+            ("imu/data", f"{IMU_TYPE}/data"),
+            ("/tf", "tf"),
+        ],
+        arguments=[
+            "--ros-args",
+            "--log-level",
+            "warn",
+        ],
+    )
+    ld.add_action(bias_compensator_node)
+    ld.add_action(filter_madgwick_node)
 
     return ld
