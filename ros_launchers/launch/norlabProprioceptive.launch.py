@@ -7,7 +7,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-IMU_TYPE = "vectornav"  # or 'xsens'
+IMU_TYPE = os.getenv("IMU_TYPE", "vectornav")  # or 'xsens'
 NAMESPACE = os.getenv("NAMESPACE", "")
 
 
