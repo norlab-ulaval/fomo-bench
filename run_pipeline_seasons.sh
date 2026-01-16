@@ -67,7 +67,7 @@ get_trajectory_rosbag() {
         if [ -d "$trajectory_folder_remote" ]; then
             # verify that there is enough space on the host
             trajectory_destination_host="$BASE_PATH_HOST/$deployment_folder/"
-            verify_free_space $trajectory_folder_remote $trajectory_destination_host
+            verify_free_space $trajectory_folder_remote $HOME
 
             info "Copying trajectory folder from $trajectory_folder_remote to $trajectory_destination_host"
             # copy the trajectory folder to the host
@@ -91,7 +91,7 @@ get_trajectory_rosbag() {
         trajectory_destination_remote="$BASE_PATH_REMOTE/mcap/$deployment_folder/"
 
         # verify that there is enough space on the host
-        verify_free_space $human_readable_folder_remote $trajectory_folder_host
+        verify_free_space $human_readable_folder_remote $HOME
         mkdir -p $trajectory_folder_host
 
         info "Converting plaintext trajectory to mcap"
