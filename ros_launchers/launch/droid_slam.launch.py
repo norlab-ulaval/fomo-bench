@@ -6,8 +6,13 @@ from ament_index_python.packages import get_package_share_directory
 import os
 
 def generate_launch_description():
+    ld = LaunchDescription()
+
     pkg_share = get_package_share_directory('ros_launchers')
     droid_slam_ros_share = get_package_share_directory('droid_slam_ros')
+
+    print("pkg_share", pkg_share)
+    print("droid_slam_ros_share", droid_slam_ros_share)
     
     # Default weights path
     default_weights = os.path.join(droid_slam_ros_share, 'droid.pth')
@@ -15,12 +20,10 @@ def generate_launch_description():
     # Config file
     config_file = os.path.join(pkg_share, 'config', '_droid_slam.yaml')
 
-    return LaunchDescription([
-        # Keep weights argument for easy override
-        DeclareLaunchArgument('weights', default_value=default_weights, description='Path to model weights'),
-        DeclareLaunchArgument('use_sim_time', default_value='true', description='Use simulation time'),
+    ld.add_action(DeclareLaunchArgument('weights', default_value=default_weights, description='Path to model weights'))
+    ld.add_action(DeclareLaunchArgument('use_sim_time', default_value='true', description='Use simulation time'))
 
-        Node(
+    slam_node = Node(
             package='droid_slam_ros',
             executable='ros_node.py',
             name='droid_node',
@@ -37,4 +40,6 @@ def generate_launch_description():
                 'stereo': True} # Enforce stereo
             ]
         )
-    ])
+    ld.add_action(slam_node)
+
+    return ld
