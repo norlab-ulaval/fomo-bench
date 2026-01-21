@@ -51,9 +51,9 @@ verify_free_space() {
 get_trajectory_rosbag() {
     local deployment_folder=$1
     local trajectory_name=$2
+    local trajectory_folder_host=""
     if [[ $RUN_SLAM -eq 1 ]]; then
         # check if the trajectory mcap is already present on the host
-        local trajectory_folder_host
         trajectory_folder_host=$(generate_trajectory_path "$BASE_PATH_HOST" "$deployment_folder" "$trajectory_name")
         if [ -d "$trajectory_folder_host" ]; then
             echo $trajectory_folder_host
@@ -122,6 +122,7 @@ get_trajectory_rosbag() {
         trajectory_folder_host="$BASE_PATH_HOST/$deployment_folder/$(basename $human_readable_folder_remote)"
     fi
 
+    sync # Wait for all pending writes to complete
     echo $trajectory_folder_host
     return 0
 }
