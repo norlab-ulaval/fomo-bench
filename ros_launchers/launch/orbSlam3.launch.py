@@ -10,7 +10,7 @@ from launch_ros.actions import Node
 IS_MAPPING = os.getenv("IS_MAPPING") == "1"
 STORAGE_PATH = os.getenv("STORAGE_PATH")
 NAMESPACE = os.getenv("NAMESPACE")
-IMU_TYPE = "vectornav"  # or 'xsens'
+IMU_TYPE = os.getenv("IMU_TYPE", "vectornav")  # or 'xsens'
 
 if IS_MAPPING is None:
     print("IS_MAPPING is not set")

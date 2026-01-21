@@ -31,6 +31,7 @@ debug() { echo -e "${C_GRAY}DEBUG: $1${C_RESET}" >&2; }
 stop_containers() {
     info "Stopping all containers."
 
+    sleep 5
     for i in "${!SLAM_IMAGES[@]}"; do
         slam_image="${SLAM_IMAGES[$i]}"
         slam_label=$(generate_slam_label "$slam_image")
@@ -331,7 +332,7 @@ eval_single_trajectory() {
     if [ "${RUN_SLAM:-0}" -eq 1 ]; then
         local max_retries=1
         local retry_count=0
-        
+
         while true; do
             monitoring_pids=()
             info "Performing initial cleanup..."
@@ -403,18 +404,18 @@ eval_single_trajectory() {
                 break
             else
                 error "Resume command failed."
-                
+
                 # Cleanup before retry
                 stop_containers
                 for pid in "${monitoring_pids[@]}"; do
                     kill "$pid" 2>/dev/null || true
                 done
-                
+
                 if [ $retry_count -ge $max_retries ]; then
                      error "Max retries reached. Aborting evaluation for this trajectory."
                      return 1
                 fi
-                
+
                 retry_count=$((retry_count+1))
                 info "Retrying evaluation... (Attempt $((retry_count+1)))"
                 sleep 5
