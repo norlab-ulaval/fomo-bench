@@ -11,8 +11,10 @@ services:
             STORAGE_PATH: /data
             NAMESPACE: ${SLAM_LABEL}
             IMU_TYPE: ${IMU_TYPE}
+            CONFIG_OVERWRITE_PATH: /tmp/config.yaml
         volumes:
             - ${PROCESSING_PATH_HOST:-/tmp}:/data
+            - ${CONFIG_OVERWRITE_PATH}:/tmp/config.yaml
 
     record_odometry:
         extends:

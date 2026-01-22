@@ -18,7 +18,11 @@ def generate_launch_description():
     default_weights = os.path.join(droid_slam_ros_share, 'droid.pth')
 
     # Config file
-    config_file = os.path.join(pkg_share, 'config', '_droid_slam.yaml')
+    if os.getenv("CONFIG_OVERWRITE_PATH"):
+        print("Using external config file: ", os.getenv("CONFIG_OVERWRITE_PATH"))
+        config_file = os.getenv("CONFIG_OVERWRITE_PATH")
+    else:
+        config_file = os.path.join(pkg_share, 'config', '_droid_slam.yaml')
 
     ld.add_action(DeclareLaunchArgument('weights', default_value=default_weights, description='Path to model weights'))
     ld.add_action(DeclareLaunchArgument('use_sim_time', default_value='true', description='Use simulation time'))
@@ -34,10 +38,11 @@ def generate_launch_description():
             parameters=[
                 config_file,
                 {
-                "use_sim_time": LaunchConfiguration("use_sim_time"),
-                'storage_path': os.getenv('STORAGE_PATH'),
-                'weights': LaunchConfiguration('weights'), # Override weights from launch arg
-                'stereo': True} # Enforce stereo
+                    "use_sim_time": LaunchConfiguration("use_sim_time"),
+                    'storage_path': os.getenv('STORAGE_PATH'),
+                    'weights': LaunchConfiguration('weights'), # Override weights from launch arg
+                    'stereo': True
+                }
             ]
         )
     ld.add_action(slam_node)
