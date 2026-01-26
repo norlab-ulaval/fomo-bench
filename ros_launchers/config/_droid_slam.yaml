@@ -1,10 +1,10 @@
 /**:
   droid_node:
     ros__parameters:
-      image_size: [344, 560]
+      image_size: [240, 320]
       disable_vis: true
-      buffer: 2048
-      upsample: true
+      buffer: 6000
+      upsample: false
       t0: 0
       stride: 1
       beta: 0.3
