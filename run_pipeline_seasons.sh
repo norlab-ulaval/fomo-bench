@@ -5,7 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source the common functions
 source "${SCRIPT_DIR}/src/lib/pipeline_common.sh"
-source .venv/bin/activate
+
+if [ -d ".venv" ]; then
+    source .venv/bin/activate
+fi
 
 # --- Seasons-specific Functions ---
 

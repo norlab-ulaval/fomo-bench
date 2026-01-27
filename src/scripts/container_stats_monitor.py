@@ -1,19 +1,13 @@
 #!/usr/bin/env python3
-
 import argparse
 import json
+import re
 import signal
 import subprocess
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-import re
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 
 # Global variable for signal handler
 output_file = None
@@ -121,55 +115,64 @@ def create_plot(json_file, plot_file):
         print("No valid data points to plot.")
         return
 
-    # Plotting
-    fig, axs = plt.subplots(4, 1, figsize=(12, 16), sharex=True)
+    try:
+        import matplotlib
 
-    # CPU
-    axs[0].plot(timestamps, cpu_percs, label="CPU Usage", color="tab:blue")
-    axs[0].set_ylabel("CPU %")
-    axs[0].set_title("CPU Usage Over Time")
-    axs[0].grid(True)
-    axs[0].legend()
+        matplotlib.use("Agg")
+        import matplotlib.dates as mdates
+        import matplotlib.pyplot as plt
 
-    # Memory
-    axs[1].plot(timestamps, mem_usages, label="Mem Usage (MiB)", color="tab:orange")
-    axs[1].set_ylabel("Memory (MiB)")
-    axs[1].set_title("Memory Usage")
-    axs[1].grid(True)
-    axs[1].legend()
+        # Plotting
+        fig, axs = plt.subplots(4, 1, figsize=(12, 16), sharex=True)
 
-    # Block IO
-    axs[2].plot(timestamps, block_io_reads, label="Block Read", color="tab:green")
-    axs[2].plot(
-        timestamps,
-        block_io_writes,
-        label="Block Write",
-        color="tab:red",
-        linestyle="--",
-    )
-    axs[2].set_ylabel("Block I/O (MB)")
-    axs[2].set_title("Block I/O")
-    axs[2].grid(True)
-    axs[2].legend()
+        # CPU
+        axs[0].plot(timestamps, cpu_percs, label="CPU Usage", color="tab:blue")
+        axs[0].set_ylabel("CPU %")
+        axs[0].set_title("CPU Usage Over Time")
+        axs[0].grid(True)
+        axs[0].legend()
 
-    # Net IO
-    axs[3].plot(timestamps, net_io_rx, label="Net Rx", color="tab:purple")
-    axs[3].plot(
-        timestamps, net_io_tx, label="Net Tx", color="tab:brown", linestyle="--"
-    )
-    axs[3].set_ylabel("Net I/O (MB)")
-    axs[3].set_title("Network I/O")
-    axs[3].grid(True)
-    axs[3].legend()
+        # Memory
+        axs[1].plot(timestamps, mem_usages, label="Mem Usage (MiB)", color="tab:orange")
+        axs[1].set_ylabel("Memory (MiB)")
+        axs[1].set_title("Memory Usage")
+        axs[1].grid(True)
+        axs[1].legend()
 
-    # Formatting x-axis
-    axs[3].xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
-    fig.autofmt_xdate()
+        # Block IO
+        axs[2].plot(timestamps, block_io_reads, label="Block Read", color="tab:green")
+        axs[2].plot(
+            timestamps,
+            block_io_writes,
+            label="Block Write",
+            color="tab:red",
+            linestyle="--",
+        )
+        axs[2].set_ylabel("Block I/O (MB)")
+        axs[2].set_title("Block I/O")
+        axs[2].grid(True)
+        axs[2].legend()
 
-    plt.tight_layout()
-    plt.savefig(plot_file)
-    plt.close(fig)
-    print(f"Plot saved to {plot_file}")
+        # Net IO
+        axs[3].plot(timestamps, net_io_rx, label="Net Rx", color="tab:purple")
+        axs[3].plot(
+            timestamps, net_io_tx, label="Net Tx", color="tab:brown", linestyle="--"
+        )
+        axs[3].set_ylabel("Net I/O (MB)")
+        axs[3].set_title("Network I/O")
+        axs[3].grid(True)
+        axs[3].legend()
+
+        # Formatting x-axis
+        axs[3].xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+        fig.autofmt_xdate()
+
+        plt.tight_layout()
+        plt.savefig(plot_file)
+        plt.close(fig)
+        print(f"Plot saved to {plot_file}")
+    except ImportError:
+        print("matplotlib not found, skipping figure generation.")
 
 
 def signal_handler(sig, frame):
