@@ -10,7 +10,7 @@ cp .env.example .env
 and edit it.
 
 The evaluation actively monitors every running docker container for CPU/memory and other stats.
-These stats are saved as `.json` files in the `$PROCESSING_PATH_BASE` directory.
+These stats are saved as `.json` files in the `$OUTPUT_PATH_HOST` directory.
 If `matplotlib` is installed, the script also produces simple visualization of the statistics.
 ```shell
 python3 -m venv .venv
