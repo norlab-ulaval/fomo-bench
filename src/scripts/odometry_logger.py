@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-import rclpy
-from rclpy.node import Node
 import csv
 import os
+
+import rclpy
+from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped, Pose
+from rclpy.node import Node
 from std_msgs.msg import Header
 
 # --- Configuration ---
@@ -43,7 +44,7 @@ class OdometryLogger(Node):
 
             # Create a new, empty file (or clear an existing one).
             # This ensures the node starts with a fresh log file every time.
-            with open(OUTPUT_FILE, "w") as f:
+            with open(OUTPUT_FILE, "w") as _:
                 pass  # This will create an empty file or truncate an existing one.
             self.get_logger().info(
                 f"Successfully created/cleared trajectory file: {OUTPUT_FILE}"
