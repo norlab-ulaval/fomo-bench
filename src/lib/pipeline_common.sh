@@ -46,6 +46,7 @@ generate_trajectory_path() {
 }
 
 verify_free_space() {
+    #TODO finish this function
     return 0
     local remote_path=$1
     local local_path=$2
