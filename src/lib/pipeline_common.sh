@@ -284,7 +284,7 @@ prepare_output_directory() {
     info "Checking if the output directory: $OUTPUT_PATH_HOST already exists"
     if [ -d "$OUTPUT_PATH_HOST" ]; then
         if [ "${OVERWRITE:-0}" -eq 1 ]; then
-            info "Overwriting existing output directory"
+            warn "Overwriting existing output directory"
             rm -rf "$OUTPUT_PATH_HOST"
         else
             if [ "${RUN_SLAM:-0}" -eq 1 ]; then
@@ -350,7 +350,7 @@ start_slam_services() {
             export SLAM_LABEL="$slam_label"
 
             # Determine output paths
-            export OUTPUT_PATH_HOST="${OUTPUT_PATH_HOST_BASE}/${SLAM_LABEL}"
+            export OUTPUT_PATH_HOST="${RESULTS_PATH}/${SLAM_LABEL}"
             export PROCESSING_PATH_HOST="${PROCESSING_PATH_BASE}/${SLAM_LABEL}/${MAPPING_DATE}"
 
             # Create directories
@@ -408,8 +408,8 @@ run_evaluation() {
             # REFERENCE_TRAJECTORY_FILE_HOST is stable between SLAMs
             export SLAM_IMAGE="$slam_image"
             export SLAM_LABEL="$slam_label"
-            export ESTIMATED_TRAJECTORY_FILEPATH_HOST="${OUTPUT_PATH_HOST_BASE}/${slam_label}/${ESTIMATED_TRAJECTORY_FILENAME_HOST}"
-            export OUTPUT_PATH_HOST="${OUTPUT_PATH_HOST_BASE}/${slam_label}"
+            export OUTPUT_PATH_HOST="${RESULTS_PATH}/${slam_label}"
+            export ESTIMATED_TRAJECTORY_FILEPATH_HOST="${OUTPUT_PATH_HOST}/${ESTIMATED_TRAJECTORY_FILENAME_HOST}"
             if [ -f "$ESTIMATED_TRAJECTORY_FILEPATH_HOST" ]; then
                 info "Running trajectory evaluation for $slam_image..."
                 $DOCKER_COMPOSE_CMD -p "fomo-slam-${slam_label}" up -d evaluate_trajectory --remove-orphans
@@ -485,12 +485,14 @@ eval_single_trajectory() {
 
     # Store base output path and processing path
     export OUTPUT_PATH_HOST_BASE=$OUTPUT_PATH_HOST
-    export PROCESSING_PATH_BASE="${OUTPUT_PATH_HOST}/processing" # Already set in .env usually
-    export OUTPUT_PATH_STATS="${OUTPUT_PATH_HOST}/stats"
+    export RESULTS_PATH="${OUTPUT_PATH_HOST_BASE}/results"
+    export PROCESSING_PATH_BASE="${OUTPUT_PATH_HOST_BASE}/processing" # Already set in .env usually
+    export OUTPUT_PATH_STATS="${OUTPUT_PATH_HOST_BASE}/stats"
 
     mkdir -p "$PROCESSING_PATH_BASE"
     mkdir -p "$OUTPUT_PATH_HOST_BASE"
     mkdir -p "$OUTPUT_PATH_STATS"
+    mkdir -p "$RESULTS_PATH"
 
     export MAPPING_DATE=$2
     export LOCALIZATION_DATE=$3
@@ -532,10 +534,10 @@ eval_single_trajectory() {
                 slam_image="${SLAM_IMAGES[$i]}"
                 if [ -n "$slam_image" ]; then
                     slam_label=$(generate_slam_label "$slam_image")
-                    stats_path="$OUTPUT_PATH_STATS/$slam_label/$MAPPING_DATE"
+                    stats_path="$OUTPUT_PATH_STATS/$slam_label"
                     mkdir -p $stats_path
 
-                    python src/scripts/container_stats_monitor.py --name "run_slam_${slam_label}" -o "$stats_path/stats_${LOCALIZATION_DATE}.json" &
+                    python src/scripts/container_stats_monitor.py --name "run_slam_${slam_label}" -o "$stats_path/${MAPPING_DATE}_${LOCALIZATION_DATE}.json" &
                     monitoring_pids+=($!)
                 fi
             done
@@ -567,7 +569,7 @@ eval_single_trajectory() {
                         if [ -n "$slam_image" ]; then
                             slam_label=$(generate_slam_label "$slam_image")
                             proc_path="$PROCESSING_PATH_BASE/$slam_label/$MAPPING_DATE"
-                            est_path="$OUTPUT_PATH_HOST_BASE/$slam_label/$OUTPUT_FILE_NAME"
+                            est_path="$RESULTS_PATH/$slam_label/$OUTPUT_FILE_NAME"
 
                             if [ -f "${proc_path}/trajectory.txt" ]; then
                                 info "Method $slam_label generated a final trajectory file, replacing existing one..."
