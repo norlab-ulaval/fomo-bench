@@ -72,10 +72,9 @@ for loc_folder in "${COL_FOLDERS[@]}"; do
     done
 done
 
-# Create and open confusion matrix
-info "Creating confusion matrix..."
-$DOCKER_COMPOSE_CMD up plot_confusion_matrix
-success "Confusion matrix created."
+# info "Creating confusion matrix..."
+# $DOCKER_COMPOSE_CMD up plot_confusion_matrix
+# success "Confusion matrix created."
 
-CONFUSION_MATRIX_PATH="${OUTPUT_PATH_HOST}/confusion_matrices.pdf"
-open_report "$CONFUSION_MATRIX_PATH" "confusion matrix"
+# CONFUSION_MATRIX_PATH="${OUTPUT_PATH_HOST}/confusion_matrices.pdf"
+# open_report "$CONFUSION_MATRIX_PATH" "confusion matrix"
