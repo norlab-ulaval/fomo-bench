@@ -320,7 +320,7 @@ save_slam_logs() {
             slam_label=$(generate_slam_label "$slam_image")
 
             # Determine processing path for this index
-            proc_path="$PROCESSING_PATH_BASE/$slam_label/$MAPPING_DATE"
+            proc_path="${OUTPUT_PATH_HOST}/processing/${slam_label}/${MAPPING_DATE}"
 
             docker logs "run_slam_${slam_label}" > "${proc_path}/run_slam_${LOCALIZATION_DATE}.log" 2>/dev/null || true
         fi
@@ -485,10 +485,12 @@ eval_single_trajectory() {
 
     # Store base output path and processing path
     export OUTPUT_PATH_HOST_BASE=$OUTPUT_PATH_HOST
-    export PROCESSING_PATH_BASE=$PROCESSING_PATH_BASE # Already set in .env usually
+    export PROCESSING_PATH_BASE="${OUTPUT_PATH_HOST}/processing" # Already set in .env usually
+    export OUTPUT_PATH_STATS="${OUTPUT_PATH_HOST}/stats"
 
     mkdir -p "$PROCESSING_PATH_BASE"
     mkdir -p "$OUTPUT_PATH_HOST_BASE"
+    mkdir -p "$OUTPUT_PATH_STATS"
 
     export MAPPING_DATE=$2
     export LOCALIZATION_DATE=$3
@@ -510,7 +512,9 @@ eval_single_trajectory() {
             # Start the core services first
             info "Starting core services..."
 
-            python3 src/scripts/container_stats_monitor.py --name play_bag -o "$PROCESSING_PATH_BASE/stats_playbag_${MAPPING_DATE}_${LOCALIZATION_DATE}.json" &
+            stats_path="${OUTPUT_PATH_STATS}/play_bag"
+            mkdir -p $stats_path
+            python3 src/scripts/container_stats_monitor.py --name play_bag -o "$stats_path/${MAPPING_DATE}_${LOCALIZATION_DATE}.json" &
             monitoring_pids+=($!)
 
             info "Loading $LOCALIZATION_DATE rosbag"
@@ -528,9 +532,10 @@ eval_single_trajectory() {
                 slam_image="${SLAM_IMAGES[$i]}"
                 if [ -n "$slam_image" ]; then
                     slam_label=$(generate_slam_label "$slam_image")
-                    stats_path="$PROCESSING_PATH_BASE/$slam_label/$MAPPING_DATE/stats_${LOCALIZATION_DATE}.json"
+                    stats_path="$OUTPUT_PATH_STATS/$slam_label/$MAPPING_DATE"
+                    mkdir -p $stats_path
 
-                    python src/scripts/container_stats_monitor.py --name "run_slam_${slam_label}" -o "$stats_path" &
+                    python src/scripts/container_stats_monitor.py --name "run_slam_${slam_label}" -o "$stats_path/stats_${LOCALIZATION_DATE}.json" &
                     monitoring_pids+=($!)
                 fi
             done
