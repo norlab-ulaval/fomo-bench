@@ -46,6 +46,34 @@ verify_free_space() {
     fi
 }
 
+# Function to map topic names to plaintext_to_mcap export script argument
+map_topic() {
+    local topic="$1"
+    case "$topic" in
+        "/robosense/points")
+            echo "robosense"
+            ;;
+        "/leishen/points")
+            echo "leishen"
+            ;;
+        "/navtech/b_scan_msg")
+            echo "navtech"
+            ;;
+        "/zedx/left/image_rect")
+            echo "zedx_left"
+            ;;
+        "/zedx/right/image_rect")
+            echo "zedx_right"
+            ;;
+        "/basler/image_rect")
+            echo "basler"
+            ;;
+        *)
+            # Return nothing for ignored topics
+            ;;
+    esac
+}
+
 # Function to generate trajectory rosbag
 # First check if the bag is already present on the host
 # If not, verify if it is available on the remote
@@ -100,13 +128,31 @@ get_trajectory_rosbag() {
         mkdir -p $trajectory_folder_host
 
         info "Converting plaintext trajectory to mcap"
+        # Check if topics file exists
+        if [ -f $TOPICS_FILE ]; then
+            echo "Using topics file: ${TOPICS_FILE}"
+            # Read file into array - portable method
+            TOPICS=()
+            while IFS= read -r line; do
+                TOPICS+=("$line")
+            done < "$TOPICS_FILE"
+        else
+            echo "No topics file found. Using only basic topics."
+        fi
+        PREFIXED_TOPICS=()
+        for topic in "${TOPICS[@]}"; do
+            mapped=$(map_topic "$topic")
+            if [ -n "$mapped" ]; then
+                PREFIXED_TOPICS+=("--sensors" "$mapped")
+            fi
+        done
+
         docker run --rm -t \
             -v $human_readable_folder_remote:/input \
             -v $trajectory_folder_host:/output \
             ghcr.io/norlab-ulaval/fomo-sdk:latest ijrr_to_mcap \
             --input /input --output /output \
-            --sensors navtech --sensors robosense \
-            --sensors zedx_right --sensors zedx_left \
+            "${PREFIXED_TOPICS[@]}" \
             --compress
 
         # copy calibration files and ground truth data
