@@ -5,46 +5,59 @@ from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
 import os
 
+
 def generate_launch_description():
     ld = LaunchDescription()
 
-    pkg_share = get_package_share_directory('ros_launchers')
-    droid_slam_ros_share = get_package_share_directory('droid_slam_ros')
+    pkg_share = get_package_share_directory("ros_launchers")
+    droid_slam_ros_share = get_package_share_directory("droid_slam_ros")
 
     print("pkg_share", pkg_share)
     print("droid_slam_ros_share", droid_slam_ros_share)
-    
+
     # Default weights path
-    default_weights = os.path.join(droid_slam_ros_share, 'droid.pth')
+    default_weights = os.path.join(droid_slam_ros_share, "droid.pth")
 
     # Config file
     if os.getenv("CONFIG_OVERWRITE_PATH"):
         print("Using external config file: ", os.getenv("CONFIG_OVERWRITE_PATH"))
         config_file = os.getenv("CONFIG_OVERWRITE_PATH")
     else:
-        config_file = os.path.join(pkg_share, 'config', '_droid_slam.yaml')
+        config_file = os.path.join(pkg_share, "config", "_droid_slam.yaml")
 
-    ld.add_action(DeclareLaunchArgument('weights', default_value=default_weights, description='Path to model weights'))
-    ld.add_action(DeclareLaunchArgument('use_sim_time', default_value='true', description='Use simulation time'))
+    ld.add_action(
+        DeclareLaunchArgument(
+            "weights",
+            default_value=default_weights,
+            description="Path to model weights",
+        )
+    )
+    ld.add_action(
+        DeclareLaunchArgument(
+            "use_sim_time", default_value="true", description="Use simulation time"
+        )
+    )
 
     slam_node = Node(
-            package='droid_slam_ros',
-            executable='ros_node.py',
-            name='droid_node',
-            namespace=os.getenv('NAMESPACE'),
-            output="screen",
-            sigterm_timeout="240",  # Wait before escalating to SIGTERM
-            sigkill_timeout="10",  # Wait before SIGKILL
-            parameters=[
-                config_file,
-                {
-                    "use_sim_time": LaunchConfiguration("use_sim_time"),
-                    'storage_path': os.getenv('STORAGE_PATH'),
-                    'weights': LaunchConfiguration('weights'), # Override weights from launch arg
-                    'stereo': True
-                }
-            ]
-        )
+        package="droid_slam_ros",
+        executable="ros_node.py",
+        name="droid_node",
+        namespace=os.getenv("NAMESPACE"),
+        output="screen",
+        sigterm_timeout="240",  # Wait before escalating to SIGTERM
+        sigkill_timeout="10",  # Wait before SIGKILL
+        parameters=[
+            config_file,
+            {
+                "use_sim_time": LaunchConfiguration("use_sim_time"),
+                "storage_path": os.getenv("STORAGE_PATH"),
+                "weights": LaunchConfiguration(
+                    "weights"
+                ),  # Override weights from launch arg
+                "stereo": True,
+            },
+        ],
+    )
     ld.add_action(slam_node)
 
     return ld
