@@ -1,4 +1,29 @@
+# fomo-bench
+
+## Installation
+fomo-bench is a docker-based evaluation platform for proprioceptive, lidar, radar and visual odometry, localization and SLAM algorithms.
+It is capable of evaluating one or multiple algos simultaneously.
+To start, copy the example `.env` file:
+```shell
+cp .env.example .env
+```
+and edit it.
+
+The evaluation actively monitors every running docker container for CPU/memory and other stats.
+These stats are saved as `.json` files in the `$PROCESSING_PATH_BASE` directory.
+If `matplotlib` is installed, the script also produces simple visualization of the statistics.
+```shell
+python3 -m venv .venv
+source .venv/bin/activate
+pip install matplotlib
+```
+The `.venv` directory is detected automatically.
+
+## Running the evaluation
+TODO
+
 ## Preparing your docker image
+TODO
 
 ## Data export
 If your solution requires additional time to complete after the ros2 bag play finishes, for example to save the output map, you can extend the sigterm and sigkill timeouts for your ros2 node:
