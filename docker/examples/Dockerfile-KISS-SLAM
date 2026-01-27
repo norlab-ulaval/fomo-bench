@@ -30,7 +30,7 @@ RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
 RUN git clone https://github.com/norlab-ulaval/kiss-slam.git /ros2_ws/src/kiss-slam
 RUN git clone https://github.com/norlab-ulaval/kiss-icp.git /ros2_ws/src/kiss-icp
-RUN git clone https://github.com/norlab-ulaval/fomo-bench.git -b parallel-evaluation /tmp/fomo-bench \
+RUN git clone https://github.com/norlab-ulaval/fomo-bench.git -b ros2 /tmp/fomo-bench \
     && mv /tmp/fomo-bench/ros_launchers /ros2_ws/src/ros_launchers
 
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
