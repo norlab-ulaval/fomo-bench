@@ -20,6 +20,8 @@ def generate_launch_description():
         "namespace": "vtr",
         "executable": "vtr_navigation",
         "output": "screen",
+        "sigterm_timeout": "60",  # Wait 60 seconds before escalating to SIGTERM
+        "sigkill_timeout": "10",  # Wait 10 more seconds before SIGKILL
     }
 
     INPUT_IMU_BIAS_FILE = os.path.join("/", "calib", "imu.json")
