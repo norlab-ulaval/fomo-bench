@@ -31,6 +31,7 @@ generate_trajectory_path() {
     local base_path=$1
     local deployment_folder=$2
     local trajectory_name=$3
+
     current_folder=$(pwd)
     deployment_path=$base_path/${deployment_folder}
     if [ ! -d "$deployment_path" ]; then
@@ -282,20 +283,10 @@ prepare_output_directory() {
         exit 1
     fi
 
-    info "Checking if the output directory: $OUTPUT_PATH_HOST already exists"
     if [ -d "$OUTPUT_PATH_HOST" ]; then
-        if [ "${OVERWRITE:-0}" -eq 1 ]; then
-            warn "Overwriting existing output directory"
-            rm -rf "$OUTPUT_PATH_HOST"
-        else
-            if [ "${RUN_SLAM:-0}" -eq 1 ]; then
-                error "Output directory already exists. Please remove it manually before proceeding with SLAM."
-                exit 1
-            else
-                info "Output directory already exists. Recomputing evaluation metrics..."
-            fi
-        fi
-    fi
+    	info "Backing up existing output directory: $OUTPUT_PATH_HOST"
+        rsync -a -u "$OUTPUT_PATH_HOST/" "$OUTPUT_PATH_HOST.bak/"
+    fi 
     # Create the output directory for the new run
     mkdir -p "$OUTPUT_PATH_HOST"
 }
@@ -603,4 +594,35 @@ eval_single_trajectory() {
 
     # Run trajectory evaluation
     run_evaluation
+}
+
+
+function get_missing_evaluations() {
+    path="$OUTPUT_PATH_HOST/results"
+
+    result_exist=()
+    for file_path in "$path"/**/*.yaml; do
+        fname=$(basename "$file_path")
+        IFS="_-" read -r color y1 m1 d1 _ _ _ y2 m2 d2 _ <<< "${fname%.yaml}"
+
+        mapping_date="$y1-$m1-$d1"
+        localization_date="$y2-$m2-$d2"
+
+        run="${mapping_date}_${localization_date}"
+        if [[ ! " ${result_exist[*]} " =~ " ${run} " ]]; then
+            result_exist+=("$run")
+        fi
+    done
+
+    missing_combinations=()
+    for mapping_date in "${TARGET_DEPLOYMENTS[@]}"; do
+        for localization_date in "${TARGET_DEPLOYMENTS[@]}"; do
+            run="${mapping_date}_${localization_date}"
+            if [[ ! " ${result_exist[*]} " =~ " ${run} " ]] && [[ ! " ${missing_combinations[*]} " =~ " ${run} " ]]; then
+                missing_combinations+=("$run")
+            fi
+        done
+    done
+
+    printf '%s\n' "${missing_combinations[@]}"
 }
