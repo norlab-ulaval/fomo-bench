@@ -9,20 +9,8 @@
         { "type": "fix", "section": "Bug Fixes" },
         { "type": "docs", "section": "Documentation" },
         { "type": "chore", "section": "Miscellaneous" }
-      ]
-    },
-    "ros_launchers": {
-      "package-name": "ros_launchers",
-      "release-type": "simple",
-      "extra-files": ["package.xml"],
-      "initial-version": "1.0.0"
+      ],
+      "extra-files": ["ros_launchers/package.xml"]
     }
-  },
-  "plugins": [
-    {
-      "type": "linked-versions",
-      "groupName": "fomo-bench-group",
-      "components": [".", "ros_launchers"]
-    }
-  ]
+  }
 }
