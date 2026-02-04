@@ -601,7 +601,11 @@ function get_missing_evaluations() {
     path="$OUTPUT_PATH_HOST/results"
 
     result_exist=()
-    for file_path in "$path"/**/*.yaml; do
+    for file_path in "$path"/**/*.txt; do
+        if [ ! -s file_name.txt ]; then
+            warn "${file_path} is empty!"
+            continue
+        fi
         fname=$(basename "$file_path")
         IFS="_-" read -r color y1 m1 d1 _ _ _ y2 m2 d2 _ <<< "${fname%.yaml}"
 
