@@ -621,7 +621,6 @@ function get_missing_evaluations() {
     result_exist=()
     for file_path in "$path"/**/*.txt; do
         if [ ! -s "$file_path" ]; then
-            warn "${file_path} is empty!"
             continue
         fi
         fname=$(basename "$file_path")
