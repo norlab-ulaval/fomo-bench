@@ -286,7 +286,7 @@ prepare_output_directory() {
     if [ -d "$OUTPUT_PATH_HOST" ]; then
     	info "Backing up existing output directory: $OUTPUT_PATH_HOST"
         rsync -a -u "$OUTPUT_PATH_HOST/" "$OUTPUT_PATH_HOST.bak/"
-    fi 
+    fi
     # Create the output directory for the new run
     mkdir -p "$OUTPUT_PATH_HOST"
 }
@@ -603,7 +603,7 @@ function get_missing_evaluations() {
 
     result_exist=()
     for file_path in "$path"/**/*.txt; do
-        if [ ! -s file_name.txt ]; then
+        if [ ! -s "$file_path" ]; then
             warn "${file_path} is empty!"
             continue
         fi
