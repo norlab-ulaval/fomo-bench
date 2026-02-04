@@ -214,7 +214,16 @@ stop_containers() {
 
         if [ -n "$slam_image" ]; then
             slam_label=$(generate_slam_label "$slam_image")
-            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml stop --timeout 10000
+            # if the image is droidslam, use gpu:
+            if [[ "$slam_label" == *"droidslam"* ]]; then
+                RUN_SLAM_SERVICE="run_slam_gpu"
+            else
+                RUN_SLAM_SERVICE="run_slam"
+            fi
+            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml stop --timeout 10000 \
+                record_odometry \
+                ${RUN_SLAM_SERVICE}
+
         fi
     done
 
@@ -336,7 +345,13 @@ start_slam_services() {
 
         if [ -n "$slam_image" ]; then
             slam_label=$(generate_slam_label "$slam_image")
-            info "Starting SLAM service $((i+1)): $slam_image (Label: $slam_label)"
+            # if the image is droidslam, use gpu:
+            if [[ "$slam_label" == *"droidslam"* ]]; then
+                RUN_SLAM_SERVICE="run_slam_gpu"
+            else
+                RUN_SLAM_SERVICE="run_slam"
+            fi
+            info "Starting SLAM service ${RUN_SLAM_SERVICE} [$((i+1))]: $slam_image (Label: $slam_label)"
 
             # Export variables for this specific SLAM instance
             export SLAM_IMAGE="$slam_image"
@@ -351,7 +366,9 @@ start_slam_services() {
             mkdir -p "$PROCESSING_PATH_HOST"
 
             # Launch the SLAM pair as a separate project
-            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml up -d --force-recreate --remove-orphans
+            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml up -d --force-recreate --remove-orphans \
+                record_odometry \
+                ${RUN_SLAM_SERVICE}
         fi
     done
 
