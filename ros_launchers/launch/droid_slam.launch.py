@@ -44,7 +44,7 @@ def generate_launch_description():
         name="droid_node",
         namespace=os.getenv("NAMESPACE"),
         output="screen",
-        sigterm_timeout="240",  # Wait before escalating to SIGTERM
+        sigterm_timeout="10000",  # Wait before escalating to SIGTERM
         sigkill_timeout="10",  # Wait before SIGKILL
         parameters=[
             config_file,

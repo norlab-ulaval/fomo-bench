@@ -213,7 +213,7 @@ stop_containers() {
 
         if [ -n "$slam_image" ]; then
             slam_label=$(generate_slam_label "$slam_image")
-            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml stop
+            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml stop --timeout 10000
         fi
     done
 
@@ -322,6 +322,7 @@ save_slam_logs() {
 
             # Determine processing path for this index
             proc_path="${OUTPUT_PATH_HOST}/processing/${slam_label}/${MAPPING_DATE}"
+            echo "Saving logs from container "run_slam_${slam_label}" to ${proc_path}/run_slam_${LOCALIZATION_DATE}.log"
 
             docker logs "run_slam_${slam_label}" > "${proc_path}/run_slam_${LOCALIZATION_DATE}.log" 2>/dev/null || true
         fi
