@@ -170,7 +170,7 @@ get_trajectory_rosbag() {
         docker run --rm -t \
             -v $human_readable_folder_remote:/input \
             -v $trajectory_folder_host:/output \
-            ghcr.io/norlab-ulaval/fomo-sdk:latest ijrr_to_mcap \
+            ghcr.io/norlab-ulaval/fomo-rust-sdk:sha-ef7b2d3 ijrr_to_mcap \
             --input /input --output /output \
             "${PREFIXED_TOPICS[@]}" \
             --compress
