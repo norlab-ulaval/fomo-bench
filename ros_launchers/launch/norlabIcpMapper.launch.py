@@ -104,7 +104,7 @@ def generate_launch_description():
                 "is_3D": True,
                 "save_map_cells_on_hard_drive": False,
                 "publish_tfs_between_registrations": True,
-                "deskew": False,
+                "deskew": True,
                 "compression_voxel_size": 0.5,
             }
         ],
