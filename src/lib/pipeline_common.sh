@@ -170,7 +170,7 @@ get_trajectory_rosbag() {
         docker run --rm -t \
             -v $human_readable_folder_remote:/input \
             -v $trajectory_folder_host:/output \
-            ghcr.io/norlab-ulaval/fomo-sdk:latest ijrr_to_mcap \
+            ghcr.io/norlab-ulaval/fomo-rust-sdk:sha-ef7b2d3 ijrr_to_mcap \
             --input /input --output /output \
             "${PREFIXED_TOPICS[@]}" \
             --compress
@@ -214,7 +214,16 @@ stop_containers() {
 
         if [ -n "$slam_image" ]; then
             slam_label=$(generate_slam_label "$slam_image")
-            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml stop
+            # if the image is droidslam, use gpu:
+            if [[ "$slam_label" == *"droidslam"* ]]; then
+                RUN_SLAM_SERVICE="run_slam_gpu"
+            else
+                RUN_SLAM_SERVICE="run_slam"
+            fi
+            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml stop --timeout 10000 \
+                record_odometry \
+                ${RUN_SLAM_SERVICE}
+
         fi
     done
 
@@ -286,7 +295,7 @@ prepare_output_directory() {
     if [ -d "$OUTPUT_PATH_HOST" ]; then
     	info "Backing up existing output directory: $OUTPUT_PATH_HOST"
         rsync -a -u "$OUTPUT_PATH_HOST/" "$OUTPUT_PATH_HOST.bak/"
-    fi 
+    fi
     # Create the output directory for the new run
     mkdir -p "$OUTPUT_PATH_HOST"
 }
@@ -313,6 +322,7 @@ save_slam_logs() {
 
             # Determine processing path for this index
             proc_path="${OUTPUT_PATH_HOST}/processing/${slam_label}/${MAPPING_DATE}"
+            echo "Saving logs from container "run_slam_${slam_label}" to ${proc_path}/run_slam_${LOCALIZATION_DATE}.log"
 
             docker logs "run_slam_${slam_label}" > "${proc_path}/run_slam_${LOCALIZATION_DATE}.log" 2>/dev/null || true
         fi
@@ -335,7 +345,13 @@ start_slam_services() {
 
         if [ -n "$slam_image" ]; then
             slam_label=$(generate_slam_label "$slam_image")
-            info "Starting SLAM service $((i+1)): $slam_image (Label: $slam_label)"
+            # if the image is droidslam, use gpu:
+            if [[ "$slam_label" == *"droidslam"* ]]; then
+                RUN_SLAM_SERVICE="run_slam_gpu"
+            else
+                RUN_SLAM_SERVICE="run_slam"
+            fi
+            info "Starting SLAM service ${RUN_SLAM_SERVICE} [$((i+1))]: $slam_image (Label: $slam_label)"
 
             # Export variables for this specific SLAM instance
             export SLAM_IMAGE="$slam_image"
@@ -350,7 +366,9 @@ start_slam_services() {
             mkdir -p "$PROCESSING_PATH_HOST"
 
             # Launch the SLAM pair as a separate project
-            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml up -d --force-recreate --remove-orphans
+            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml up -d --force-recreate --remove-orphans \
+                record_odometry \
+                ${RUN_SLAM_SERVICE}
         fi
     done
 
@@ -602,8 +620,7 @@ function get_missing_evaluations() {
 
     result_exist=()
     for file_path in "$path"/**/*.txt; do
-        if [ ! -s file_name.txt ]; then
-            warn "${file_path} is empty!"
+        if [ ! -s "$file_path" ]; then
             continue
         fi
         fname=$(basename "$file_path")

@@ -6,7 +6,7 @@
       buffer: 6000
       upsample: false
       t0: 0
-      stride: 1
+      stride: 3
       beta: 0.3
       filter_thresh: 2.0
       warmup: 4
