@@ -109,7 +109,7 @@ get_trajectory_rosbag() {
             echo $trajectory_folder_host
             return 0
         fi
-        warn "No $trajectory_name trajectory folder found for deployment: $deployment_folder in: $BASE_PATH_HOST"
+        warn "No $trajectory_name trajectory folder found for deployment: $deployment_folder in: $BASE_PATH_HOST" >&2
 
         # check if the trajectory mcap is already present on the remote
         if [ $COPY_EXISTING_MCAP -eq 1 ]; then
@@ -120,9 +120,9 @@ get_trajectory_rosbag() {
                 trajectory_destination_host="$BASE_PATH_HOST/$deployment_folder/"
                 verify_free_space $trajectory_folder_remote $HOME
 
-                info "Copying trajectory folder from $trajectory_folder_remote to $trajectory_destination_host"
+                info "Copying trajectory folder from $trajectory_folder_remote to $trajectory_destination_host" >&2
                 # copy the trajectory folder to the host
-                rsync -rP $trajectory_folder_remote $trajectory_destination_host
+                rsync -rP $trajectory_folder_remote $trajectory_destination_host >&2
 
                 sync # Wait for all pending writes to complete
 
@@ -130,16 +130,16 @@ get_trajectory_rosbag() {
                 echo "$trajectory_destination_host/$(basename $trajectory_folder_remote)"
                 return 0
             fi
-            warn "No $trajectory_name trajectory folder found for deployment: $deployment_folder in: $BASE_PATH_REMOTE/mcap"
+            warn "No $trajectory_name trajectory folder found for deployment: $deployment_folder in: $BASE_PATH_REMOTE/mcap" >&2
         fi
         # check if the trajectory plaintext is on the remote
         local human_readable_folder_remote
         human_readable_folder_remote=$(generate_trajectory_path "$BASE_PATH_REMOTE"/ijrr "$deployment_folder" "$trajectory_name")
         if [ ! -d "$human_readable_folder_remote" ]; then
-            error "No plaintext remote trajectory folder found for deployment: $deployment_folder and trajectory: $trajectory_name"
+            error "No plaintext remote trajectory folder found for deployment: $deployment_folder and trajectory: $trajectory_name" >&2
             return 0
         fi
-        info "Generating trajectory rosbag for deployment: $deployment_folder and trajectory: $trajectory_name"
+        info "Generating trajectory rosbag for deployment: $deployment_folder and trajectory: $trajectory_name" >&2
         trajectory_folder_host="$BASE_PATH_HOST/$deployment_folder/$(basename $human_readable_folder_remote)"
         trajectory_destination_remote="$BASE_PATH_REMOTE/mcap/$deployment_folder/"
 
@@ -147,17 +147,17 @@ get_trajectory_rosbag() {
         verify_free_space $human_readable_folder_remote $HOME
         mkdir -p $trajectory_folder_host
 
-        info "Converting plaintext trajectory to mcap"
+        info "Converting plaintext trajectory to mcap" >&2
         # Check if topics file exists
         if [ -f $TOPICS_FILE ]; then
-            echo "Using topics file: ${TOPICS_FILE}"
+            debug "Using topics file: ${TOPICS_FILE}" >&2
             # Read file into array - portable method
             TOPICS=()
             while IFS= read -r line; do
                 TOPICS+=("$line")
             done < "$TOPICS_FILE"
         else
-            echo "No topics file found. Using only basic topics."
+            warn "No topics file found. Using only basic topics." >&2
         fi
         PREFIXED_TOPICS=()
         for topic in "${TOPICS[@]}"; do
@@ -173,22 +173,22 @@ get_trajectory_rosbag() {
             ghcr.io/norlab-ulaval/fomo-rust-sdk:sha-ef7b2d3 ijrr_to_mcap \
             --input /input --output /output \
             "${PREFIXED_TOPICS[@]}" \
-            --compress
+            --compress >&2
 
         # copy calibration files and ground truth data
-        info "Copying calibration files and ground truth data"
+        info "Copying calibration files and ground truth data" >&2
         cp -r $human_readable_folder_remote/calib $trajectory_folder_host
         cp $human_readable_folder_remote/gt.txt $trajectory_folder_host
 
         if [ ${COPY_MCAP_TO_REMOTE:-0} -eq 1 ]; then
-            info "Copying trajectory folder back to remote"
+            info "Copying trajectory folder back to remote" >&2
             rsync -rP $trajectory_folder_host $trajectory_destination_remote
         fi
     else
         local human_readable_folder_remote
         human_readable_folder_remote=$(generate_trajectory_path "$BASE_PATH_REMOTE"/ijrr "$deployment_folder" "$trajectory_name")
         if [ ! -d "$human_readable_folder_remote" ]; then
-            error "No plaintext remote trajectory folder found for deployment: $deployment_folder and trajectory: $trajectory_name"
+            error "No plaintext remote trajectory folder found for deployment: $deployment_folder and trajectory: $trajectory_name"  >&2
             return 0
         fi
         trajectory_folder_host="$BASE_PATH_HOST/$deployment_folder/$(basename $human_readable_folder_remote)"
