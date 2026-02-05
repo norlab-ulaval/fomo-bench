@@ -16,8 +16,23 @@ RUN apt clean\
     build-essential \
     clang cmake \
     g++ gcc gdb git \
-    libceres-dev libeigen3-dev \
+    wget \
+    libgoogle-glog-dev libgflags-dev \
+    libatlas-base-dev \
+    libeigen3-dev \
+    libsuitesparse-dev \
     && apt clean
+
+WORKDIR /opt
+RUN wget http://ceres-solver.org/ceres-solver-2.2.0.tar.gz \
+    && tar zxf ceres-solver-2.2.0.tar.gz \
+    && mkdir ceres-bin \
+    && cd ceres-bin \
+    && cmake ../ceres-solver-2.2.0 \
+    && make -j10 \
+    && make test \
+    && make install
+
 
 # create ros workspace and other folders
 RUN mkdir -p /ros2_ws/src
@@ -33,8 +48,8 @@ WORKDIR /ros2_ws
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
 RUN rosdep update
 RUN rosdep install --from-paths /ros2_ws/src --ignore-src -r -y
-RUN source /opt/ros/humble/setup.bash \
-    && colcon build --symlink-install
+# RUN source /opt/ros/humble/setup.bash \
+#     && colcon build --symlink-install
 
 STOPSIGNAL SIGINT
 # add additional commands here
