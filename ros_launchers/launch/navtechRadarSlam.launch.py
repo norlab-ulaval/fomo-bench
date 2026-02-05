@@ -65,11 +65,14 @@ def generate_launch_description():
         sigkill_timeout="10",  # Wait 5 more seconds before SIGKILL
         parameters=[
             {
-                "keyframe_meter_gap": 0.2,
+                "keyframe_meter_gap": 2.0,
+                "keyframe_deg_gap": 10.0,
+                "odom_noise_score": 0.1,
+                "loop_noise_score": 3.0,
+                "loop_fitness_score_threshold": 0.3,
                 "sc_dist_thres": 0.45,
                 "use_sim_time": LaunchConfiguration("use_sim_time"),
                 "pcd_save_dir": STORAGE_PATH,
-                "loop_fitness_score_threshold": 14.0,
             }
         ],
         condition=IfCondition(LaunchConfiguration("do_slam")),
