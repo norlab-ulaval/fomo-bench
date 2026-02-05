@@ -12,7 +12,6 @@ services:
             NAMESPACE: ${SLAM_LABEL}
             IMU_TYPE: ${IMU_TYPE}
         volumes:
-            - /home/mbo/legs_ws/fomo-bench/ros_launchers:/ros2_ws/src/ros_launchers
             - ${PROCESSING_PATH_HOST:-/tmp}:/data
 
     run_slam_gpu:
