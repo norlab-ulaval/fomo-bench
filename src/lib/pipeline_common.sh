@@ -321,8 +321,8 @@ save_slam_logs() {
             slam_label=$(generate_slam_label "$slam_image")
 
             # Determine processing path for this index
-            proc_path="${OUTPUT_PATH_HOST}/processing/${slam_label}/${MAPPING_DATE}"
-            echo "Saving logs from container "run_slam_${slam_label}" to ${proc_path}/run_slam_${LOCALIZATION_DATE}.log"
+            proc_path="${PROCESSING_PATH_BASE}/${slam_label}/${MAPPING_DATE}"
+            echo "Saving logs from container "run_slam_${slam_label}" to ${proc_path}/${LOCALIZATION_DATE}.log"
 
             docker logs "run_slam_${slam_label}" > "${proc_path}/run_slam_${LOCALIZATION_DATE}.log" 2>/dev/null || true
         fi
