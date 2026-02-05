@@ -28,7 +28,7 @@ for map_folder in "${TARGET_DEPLOYMENTS[@]}"; do
         continue
     fi
 
-    traj_row_path=$(get_trajectory_rosbag "$map_folder" "$TARGET_TRAJECTORY_NAME")
+    traj_row_path=$(get_trajectory_rosbag "$map_folder" "$TARGET_TRAJECTORY_NAME" | tail -n 1)
     # Check if input directory exists
     if [ ! -d "$traj_row_path" ]; then
         warn "Warning: Bag directory ${traj_row_path} does not exist, skipping..."
