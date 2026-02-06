@@ -9,7 +9,7 @@ services:
         environment:
             IS_MAPPING: ${IS_MAPPING:-0}
             STORAGE_PATH: /data
-            NAMESPACE: ${SLAM_LABEL}
+            NAMESPACE: ""
             IMU_TYPE: ${IMU_TYPE}
         volumes:
             - ${PROCESSING_PATH_HOST:-/tmp}:/data

@@ -581,10 +581,10 @@ eval_single_trajectory() {
                             proc_path="$PROCESSING_PATH_BASE/$slam_label/$MAPPING_DATE"
                             est_path="$RESULTS_PATH/$slam_label/$OUTPUT_FILE_NAME"
 
-                            if [ -f "${proc_path}/trajectory.txt" ]; then
+                            if [ -f "${proc_path}/trajectory.csv" ]; then
                                 info "Method $slam_label generated a final trajectory file, replacing existing one..."
                                 mv "$est_path" "${est_path}_bak" 2>/dev/null || true
-                                mv "${proc_path}/trajectory.txt" "$est_path"
+                                mv "${proc_path}/trajectory.csv" "$est_path"
                             fi
                         fi
                 done

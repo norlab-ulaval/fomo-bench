@@ -24,12 +24,6 @@ elif STORAGE_PATH is None:
     exit(1)
 
 IS_MAPPING = IS_MAPPING == "1"
-if IS_MAPPING:
-    input_map_name = ""
-    output_map_name = f"{STORAGE_PATH}/map.vtk"
-else:
-    input_map_name = f"{STORAGE_PATH}/map.vtk"
-    output_map_name = ""
 
 min_range = float(5.0)
 max_range = float(200.0)
@@ -44,27 +38,20 @@ over_reject = False  # If true, also reject the neighborhood points when perform
 
 def generate_launch_description():
     ld = LaunchDescription()
-    share_folder = get_package_share_directory("ros_launchers")
-    launch_folder = os.path.join(share_folder, "launch")
 
     ld.add_action(
         DeclareLaunchArgument(
             "use_sim_time", default_value="true", description="Use simulation time"
         )
     )
-
-    imu_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([os.path.join(launch_folder, "imu.launch.py")])
-    )
-    ld.add_action(imu_launch)
     lamaa_node = Node(
         package="ffastllamaa",
         executable="lidar_scan_odometry",
         name="lidar_scan_odometry",
         namespace=NAMESPACE,
         remappings=[
-            ("/imu/acc", f"{IMU_TYPE}/data"),
-            ("/imu/gyr", f"{IMU_TYPE}/data"),
+            ("/imu/acc", f"{IMU_TYPE}/data_raw"),
+            ("/imu/gyr", f"{IMU_TYPE}/data_raw"),
             ("/lidar_raw_points", f"/{LIDAR_TYPE}/points"),
             ("/undistortion_pose", "estimated_pose"),
         ],
@@ -74,6 +61,8 @@ def generate_launch_description():
                 "low_latency": True
             },  # Set to True for estimation at each scan, False for every second scan
             {"dense_pc_output": False},  # Set to True to output dense point cloud
+            {"absolute_time": True},
+            {"point_time_multiplier": 1e-6},  # our timestamps our in microseconds
             {"min_range": float(min_range)},
             {"max_range": float(max_range)},
             {"max_feature_range": float(max_range)},
@@ -91,60 +80,58 @@ def generate_launch_description():
             {"acc_in_m_per_s2": True},
             {"invert_imu": False},
             # Calibration
-            {"calib_px": 0.0},
-            {"calib_py": 0.0},
-            {"calib_pz": -0.28},
-            {"calib_rx": 2.92077461},
-            {"calib_ry": -1.15627809},
-            {"calib_rz": -0.00226139},
+            {"calib_px": 0.823},
+            {"calib_py": -0.106},
+            {"calib_pz": -0.375},
+            {"calib_rx": -0.003},
+            {"calib_ry": 0.003},
+            {"calib_rz": 1.568},
             # In case the point cloud is not sorted by time, set this to True
             {"unsorted_pc": False},
         ],
         output="screen",
     )
-    gp_map_node = (
-        Node(
-            package="ffastllamaa",
-            executable="gp_map",
-            name="gp_map",
-            namespace=NAMESPACE,
-            remappings=[
-                ("/points_input", "lidar_scan_undistorted"),
-                ("/pose_input", "estimated_pose"),
-            ],
-            parameters=[
-                {"use_sim_time": LaunchConfiguration("use_sim_time")},
-                {"point_cloud_internal_type": True},
-                {"voxel_size": 0.30},
-                {"neighbourhood_size": 2},
-                {"register": True},
-                {"register_with_approximate_field": False},
-                {"voxel_size_factor_for_registration": 2.0},
-                {"max_num_pts_for_registration": 8000},
-                {"loss_function_scale": 0.5},
-                {
-                    "use_temporal_weights": False
-                },  # If true, registration weight are 10 times bigger for voxels associated to the older scans than for the newer ones
-                {"with_init_guess": True},
-                {"map_publish_period": 0.5},
-                {"key_framing": key_framing},
-                {"key_framing_dist_thr": key_frame_dist_thr},
-                {"key_framing_rot_thr": key_frame_rot_thr},
-                {"key_framing_time_thr": key_frame_time_thr},
-                # Free space carving (<= 0.0 to disable it)
-                {"min_range": min_range},
-                {"free_space_carving_radius": float(50)},
-                {"over_reject": over_reject},
-                {"last_scan_carving": True},
-                # Path to where the map will be saved
-                {"map_path": STORAGE_PATH},
-                {"submap_length": 200.0},
-                {"submap_overlap": 0.2},
-                {"write_scans": False},
-            ],
-            output="screen",
-            on_exit=Shutdown(),
-        ),
+    gp_map_node = Node(
+        package="ffastllamaa",
+        executable="gp_map",
+        name="gp_map",
+        namespace=NAMESPACE,
+        output="screen",
+        remappings=[
+            ("/points_input", "lidar_scan_undistorted"),
+            ("/pose_input", "estimated_pose"),
+        ],
+        parameters=[
+            {"use_sim_time": LaunchConfiguration("use_sim_time")},
+            {"point_cloud_internal_type": True},
+            {"voxel_size": 0.30},
+            {"neighbourhood_size": 2},
+            {"register": True},
+            {"register_with_approximate_field": False},
+            {"voxel_size_factor_for_registration": 2.0},
+            {"max_num_pts_for_registration": 8000},
+            {"loss_function_scale": 0.5},
+            {
+                "use_temporal_weights": False
+            },  # If true, registration weight are 10 times bigger for voxels associated to the older scans than for the newer ones
+            {"with_init_guess": True},
+            {"map_publish_period": 10.0},
+            {"key_framing": key_framing},
+            {"key_framing_dist_thr": key_frame_dist_thr},
+            {"key_framing_rot_thr": key_frame_rot_thr},
+            {"key_framing_time_thr": key_frame_time_thr},
+            # Free space carving (<= 0.0 to disable it)
+            {"min_range": min_range},
+            {"free_space_carving_radius": float(50)},
+            {"over_reject": over_reject},
+            {"last_scan_carving": True},
+            # Path to where the map will be saved
+            {"map_path": STORAGE_PATH},
+            {"submap_length": -1.0 if IS_MAPPING else 200.0},
+            {"submap_overlap": 0.2},
+            {"write_scans": False},
+            {"localization_only": not IS_MAPPING},
+        ],
     )
 
     ld.add_action(lamaa_node)
