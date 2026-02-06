@@ -49,6 +49,8 @@ def generate_launch_description():
         executable="lidar_scan_odometry",
         name="lidar_scan_odometry",
         namespace=NAMESPACE,
+        sigterm_timeout="60",  # Wait 60 seconds before escalating to SIGTERM
+        sigkill_timeout="10",  # Wait 10 more seconds before SIGKILL
         remappings=[
             ("/imu/acc", f"{IMU_TYPE}/data_raw"),
             ("/imu/gyr", f"{IMU_TYPE}/data_raw"),
@@ -97,6 +99,8 @@ def generate_launch_description():
         name="gp_map",
         namespace=NAMESPACE,
         output="screen",
+        sigterm_timeout="60",  # Wait 60 seconds before escalating to SIGTERM
+        sigkill_timeout="10",  # Wait 10 more seconds before SIGKILL
         remappings=[
             ("/points_input", "lidar_scan_undistorted"),
             ("/pose_input", "estimated_pose"),
