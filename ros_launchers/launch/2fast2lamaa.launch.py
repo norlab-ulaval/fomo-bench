@@ -138,10 +138,12 @@ def generate_launch_description():
             {"last_scan_carving": True},
             # Path to where the map will be saved
             {"map_path": STORAGE_PATH},
-            {"submap_length": -1.0 if IS_MAPPING else 200.0},
+            {"submap_length": 200.0},
             {"submap_overlap": 0.2},
             {"write_scans": False},
             {"localization_only": not IS_MAPPING},
+            {"using_submaps": True},
+            {"reverse_path": False},
         ],
     )
 
