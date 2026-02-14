@@ -617,6 +617,22 @@ eval_single_trajectory() {
 }
 
 
+function normalize_date() {
+    local date="$1"
+    case "$date" in
+        "2025-01-30")
+            echo "2025-01-29"
+            ;;
+        "2025-03-14")
+            echo "2025-03-10"
+            ;;
+        *)
+            echo "$date"
+            ;;
+    esac
+}
+
+
 function get_missing_evaluations() {
     path="$OUTPUT_PATH_HOST/results"
 
@@ -630,6 +646,10 @@ function get_missing_evaluations() {
 
         mapping_date="$y1-$m1-$d1"
         localization_date="$y2-$m2-$d2"
+
+        # Normalize dates to match TARGET_DEPLOYMENTS naming
+        mapping_date=$(normalize_date "$mapping_date")
+        localization_date=$(normalize_date "$localization_date")
 
         run="${mapping_date}_${localization_date}"
         if [[ ! " ${result_exist[*]} " =~ " ${run} " ]]; then
