@@ -114,7 +114,7 @@ get_trajectory_rosbag() {
         # check if the trajectory mcap is already present on the remote
         if [ $COPY_EXISTING_MCAP -eq 1 ]; then
             local trajectory_folder_remote
-            trajectory_folder_remote=$(generate_trajectory_path "$BASE_PATH_REMOTE"/mcap "$deployment_folder" "$trajectory_name")
+            trajectory_folder_remote=$(generate_trajectory_path "$BASE_PATH_REMOTE"/mcap/lidar "$deployment_folder" "$trajectory_name")
             if [ -d "$trajectory_folder_remote" ]; then
                 # verify that there is enough space on the host
                 trajectory_destination_host="$BASE_PATH_HOST/$deployment_folder/"
@@ -559,6 +559,8 @@ eval_single_trajectory() {
                 info "Waiting for play_bag to finish..."
                 $DOCKER_COMPOSE_CMD wait play_bag
 
+                sleep 300
+
                 # Stop all containers
                 stop_containers
 
@@ -581,10 +583,10 @@ eval_single_trajectory() {
                             proc_path="$PROCESSING_PATH_BASE/$slam_label/$MAPPING_DATE"
                             est_path="$RESULTS_PATH/$slam_label/$OUTPUT_FILE_NAME"
 
-                            if [ -f "${proc_path}/trajectory.csv" ]; then
+                            if [ -f "${proc_path}/trajectory.txt" ]; then
                                 info "Method $slam_label generated a final trajectory file, replacing existing one..."
                                 mv "$est_path" "${est_path}_bak" 2>/dev/null || true
-                                mv "${proc_path}/trajectory.csv" "$est_path"
+                                mv "${proc_path}/trajectory.txt" "$est_path"
                             fi
                         fi
                 done
@@ -599,12 +601,12 @@ eval_single_trajectory() {
                 done
 
                 if [ $retry_count -ge $max_retries ]; then
-                     error "Max retries reached. Aborting evaluation for this trajectory."
+                     error "Max retries reached. Aborting execution for this trajectory."
                      return 1
                 fi
 
                 retry_count=$((retry_count+1))
-                info "Retrying evaluation... (Attempt $((retry_count+1)))"
+                info "Retrying execution... (Attempt $((retry_count+1)))"
                 sleep 5
             fi
         done

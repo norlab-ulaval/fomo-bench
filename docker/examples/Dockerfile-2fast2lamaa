@@ -39,7 +39,7 @@ RUN mkdir -p /ros2_ws/src
 
 WORKDIR /ros2_ws/src
 
-RUN git clone https://github.com/UTS-RI/2fast2lamaa.git
+RUN git clone https://github.com/norlab-ulaval/2fast2lamaa.git
 RUN git clone https://github.com/norlab-ulaval/fomo-bench.git -b 2fast2lamaa /tmp/fomo-bench \
     && mv /tmp/fomo-bench/ros_launchers /ros2_ws/src/ros_launchers
 
@@ -51,8 +51,7 @@ RUN rosdep install --from-paths /ros2_ws/src --ignore-src -r -y
 RUN source /opt/ros/humble/setup.bash \
     && colcon build --symlink-install
 
-RUN apt update && apt install -y ros-humble-rosbag2-storage-mcap \
-    && apt clean
+
 
 STOPSIGNAL SIGINT
 # add additional commands here

@@ -2,7 +2,14 @@ import os
 
 from ament_index_python.packages import get_package_prefix, get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    EmitEvent,
+    IncludeLaunchDescription,
+    LogInfo,
+    RegisterEventHandler,
+)
+from launch.event_handlers import OnProcessExit
 from launch.events import Shutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -25,7 +32,7 @@ elif STORAGE_PATH is None:
 
 IS_MAPPING = IS_MAPPING == "1"
 
-min_range = float(5.0)
+min_range = float(2.0)
 max_range = float(200.0)
 
 key_framing = True
@@ -49,13 +56,13 @@ def generate_launch_description():
         executable="lidar_scan_odometry",
         name="lidar_scan_odometry",
         namespace=NAMESPACE,
-        sigterm_timeout="60",  # Wait 60 seconds before escalating to SIGTERM
+        sigterm_timeout="6000",  # Wait 60 seconds before escalating to SIGTERM
         sigkill_timeout="10",  # Wait 10 more seconds before SIGKILL
         remappings=[
             ("/imu/acc", f"{IMU_TYPE}/data_raw"),
             ("/imu/gyr", f"{IMU_TYPE}/data_raw"),
             ("/lidar_raw_points", f"/{LIDAR_TYPE}/points"),
-            ("/undistortion_pose", "estimated_pose"),
+            ("/undistortion_pose", "estimated_transform"),
         ],
         parameters=[
             {"use_sim_time": LaunchConfiguration("use_sim_time")},
@@ -74,7 +81,7 @@ def generate_launch_description():
             {"state_freq": 200.0},
             {"max_associations_per_type": 1000},
             {"planar_only": False},
-            {"broken_channels": "69"},
+            {"broken_channels": ""},
             {
                 "mode": "imu"
             },  # State representation mode: imu (acc and gyr preint), gyr (gyr preint and const vel), no_imu (const linear and angular vel)
@@ -99,11 +106,11 @@ def generate_launch_description():
         name="gp_map",
         namespace=NAMESPACE,
         output="screen",
-        sigterm_timeout="60",  # Wait 60 seconds before escalating to SIGTERM
+        sigterm_timeout="6000",  # Wait 60 seconds before escalating to SIGTERM
         sigkill_timeout="10",  # Wait 10 more seconds before SIGKILL
         remappings=[
             ("/points_input", "lidar_scan_undistorted"),
-            ("/pose_input", "estimated_pose"),
+            ("/pose_input", "estimated_transform"),
         ],
         parameters=[
             {"use_sim_time": LaunchConfiguration("use_sim_time")},
@@ -140,4 +147,15 @@ def generate_launch_description():
 
     ld.add_action(lamaa_node)
     ld.add_action(gp_map_node)
+    ld.add_action(
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=gp_map_node,
+                on_exit=[
+                    LogInfo(msg="Mapper exited; tearing down entire system."),
+                    EmitEvent(event=Shutdown()),
+                ],
+            )
+        )
+    )
     return ld

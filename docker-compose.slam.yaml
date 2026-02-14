@@ -33,7 +33,7 @@ services:
         environment:
             OUTPUT_FILE_NAME: ${OUTPUT_FILE_NAME}
             OUTPUT_PATH_HOST: ${OUTPUT_PATH_HOST}
-            NAMESPACE: ${SLAM_LABEL}
+            NAMESPACE: ""
         volumes:
             - ${OUTPUT_PATH_HOST:-/tmp}:/trajectory_files
 
