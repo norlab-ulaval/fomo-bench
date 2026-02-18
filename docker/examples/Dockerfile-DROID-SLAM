@@ -50,23 +50,25 @@ ENV CXX=/usr/bin/g++-10
 ENV CUDAHOSTCXX=/usr/bin/g++-10
 ENV TORCH_CUDA_ARCH_LIST="7.5"
 
-RUN cd /opt/DROID-SLAM \
-    && export CUDA_HOME=/usr/local/cuda PATH=$CUDA_HOME/bin:$PATH LD_LIBRARY_PATH=$CUDA_HOME/lib64:$CUDA_HOME/lib64 \
-    && export CC=/usr/bin/gcc-10 CXX=/usr/bin/g++-10 CUDAHOSTCXX=/usr/bin/g++-10 \
-    && pip install thirdparty/lietorch
-RUN pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.1+cu118.html
-# we need to manually specify the CUDA architecture to build the package
-# TODO make this an argument
-RUN cd /opt/DROID-SLAM \
-    && export CUDA_HOME=/usr/local/cuda PATH=$CUDA_HOME/bin:$PATH LD_LIBRARY_PATH=$CUDA_HOME/lib64:$CUDA_HOME/lib64 \
-    && export CC=/usr/bin/gcc-10 CXX=/usr/bin/g++-10 CUDAHOSTCXX=/usr/bin/g++-10 \
-    && pip install -e .
-
 # create ros workspace and other folders
 RUN mkdir -p /ros2_ws/src
 
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
-RUN git clone https://github.com/norlab-ulaval/legs_ros_ws.git -b fomo /ros2_ws/src/legs_ros_ws
+RUN git clone https://github.com/norlab-ulaval/legs_ros_ws.git -b fomo /ros2_ws/src/legs_ros_ws --recursive
+
+# install DROID-SLAM dependencies
+RUN pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.1+cu118.html
+WORKDIR /ros2_ws/src/legs_ros_ws/droid_slam_ros/droid-slam
+RUN export CUDA_HOME=/usr/local/cuda PATH=$CUDA_HOME/bin:$PATH LD_LIBRARY_PATH=$CUDA_HOME/lib64:$CUDA_HOME/lib64 \
+    && export CC=/usr/bin/gcc-10 CXX=/usr/bin/g++-10 CUDAHOSTCXX=/usr/bin/g++-10 \
+    && pip install thirdparty/lietorch
+
+# we need to manually specify the CUDA architecture to build the package
+# TODO make this an argument
+RUN export CUDA_HOME=/usr/local/cuda PATH=$CUDA_HOME/bin:$PATH LD_LIBRARY_PATH=$CUDA_HOME/lib64:$CUDA_HOME/lib64 \
+    && export CC=/usr/bin/gcc-10 CXX=/usr/bin/g++-10 CUDAHOSTCXX=/usr/bin/g++-10 \
+    && pip install -e .
+
 RUN git clone https://github.com/norlab-ulaval/fomo-bench.git -b ros2 /tmp/fomo-bench \
     && mv /tmp/fomo-bench/ros_launchers /ros2_ws/src/ros_launchers
 
@@ -77,6 +79,7 @@ RUN cd /ros2_ws/ \
     && source /opt/ros/humble/setup.bash \
     && colcon build --symlink-install
 
+WORKDIR /data
 RUN pip install viser
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
 STOPSIGNAL SIGINT

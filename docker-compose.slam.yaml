@@ -14,6 +14,16 @@ services:
         volumes:
             - ${PROCESSING_PATH_HOST:-/tmp}:/data
 
+    run_slam_gpu:
+        extends:
+            service: run_slam
+        deploy:
+            resources:
+                reservations:
+                    devices:
+                        - driver: nvidia
+                          count: all
+                          capabilities: [gpu]
     record_odometry:
         extends:
             file: docker-compose.common.yaml

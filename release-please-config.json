@@ -1,0 +1,16 @@
+{
+  "packages": {
+    ".": {
+      "package-name": "fomo-bench",
+      "release-type": "simple",
+      "initial-version": "1.0.0",
+      "changelog-sections": [
+        { "type": "feat", "section": "Features" },
+        { "type": "fix", "section": "Bug Fixes" },
+        { "type": "docs", "section": "Documentation" },
+        { "type": "chore", "section": "Miscellaneous" }
+      ],
+      "extra-files": ["ros_launchers/package.xml"]
+    }
+  }
+}

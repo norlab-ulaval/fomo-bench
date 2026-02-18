@@ -31,6 +31,7 @@ generate_trajectory_path() {
     local base_path=$1
     local deployment_folder=$2
     local trajectory_name=$3
+
     current_folder=$(pwd)
     deployment_path=$base_path/${deployment_folder}
     if [ ! -d "$deployment_path" ]; then
@@ -108,7 +109,7 @@ get_trajectory_rosbag() {
             echo $trajectory_folder_host
             return 0
         fi
-        warn "No $trajectory_name trajectory folder found for deployment: $deployment_folder in: $BASE_PATH_HOST"
+        warn "No $trajectory_name trajectory folder found for deployment: $deployment_folder in: $BASE_PATH_HOST" >&2
 
         # check if the trajectory mcap is already present on the remote
         if [ $COPY_EXISTING_MCAP -eq 1 ]; then
@@ -119,9 +120,9 @@ get_trajectory_rosbag() {
                 trajectory_destination_host="$BASE_PATH_HOST/$deployment_folder/"
                 verify_free_space $trajectory_folder_remote $HOME
 
-                info "Copying trajectory folder from $trajectory_folder_remote to $trajectory_destination_host"
+                info "Copying trajectory folder from $trajectory_folder_remote to $trajectory_destination_host" >&2
                 # copy the trajectory folder to the host
-                rsync -rP $trajectory_folder_remote $trajectory_destination_host
+                rsync -rP $trajectory_folder_remote $trajectory_destination_host >&2
 
                 sync # Wait for all pending writes to complete
 
@@ -129,16 +130,16 @@ get_trajectory_rosbag() {
                 echo "$trajectory_destination_host/$(basename $trajectory_folder_remote)"
                 return 0
             fi
-            warn "No $trajectory_name trajectory folder found for deployment: $deployment_folder in: $BASE_PATH_REMOTE/mcap"
+            warn "No $trajectory_name trajectory folder found for deployment: $deployment_folder in: $BASE_PATH_REMOTE/mcap" >&2
         fi
         # check if the trajectory plaintext is on the remote
         local human_readable_folder_remote
         human_readable_folder_remote=$(generate_trajectory_path "$BASE_PATH_REMOTE"/ijrr "$deployment_folder" "$trajectory_name")
         if [ ! -d "$human_readable_folder_remote" ]; then
-            error "No plaintext remote trajectory folder found for deployment: $deployment_folder and trajectory: $trajectory_name"
+            error "No plaintext remote trajectory folder found for deployment: $deployment_folder and trajectory: $trajectory_name" >&2
             return 0
         fi
-        info "Generating trajectory rosbag for deployment: $deployment_folder and trajectory: $trajectory_name"
+        info "Generating trajectory rosbag for deployment: $deployment_folder and trajectory: $trajectory_name" >&2
         trajectory_folder_host="$BASE_PATH_HOST/$deployment_folder/$(basename $human_readable_folder_remote)"
         trajectory_destination_remote="$BASE_PATH_REMOTE/mcap/$deployment_folder/"
 
@@ -146,17 +147,17 @@ get_trajectory_rosbag() {
         verify_free_space $human_readable_folder_remote $HOME
         mkdir -p $trajectory_folder_host
 
-        info "Converting plaintext trajectory to mcap"
+        info "Converting plaintext trajectory to mcap" >&2
         # Check if topics file exists
         if [ -f $TOPICS_FILE ]; then
-            echo "Using topics file: ${TOPICS_FILE}"
+            debug "Using topics file: ${TOPICS_FILE}" >&2
             # Read file into array - portable method
             TOPICS=()
             while IFS= read -r line; do
                 TOPICS+=("$line")
             done < "$TOPICS_FILE"
         else
-            echo "No topics file found. Using only basic topics."
+            warn "No topics file found. Using only basic topics." >&2
         fi
         PREFIXED_TOPICS=()
         for topic in "${TOPICS[@]}"; do
@@ -169,25 +170,25 @@ get_trajectory_rosbag() {
         docker run --rm -t \
             -v $human_readable_folder_remote:/input \
             -v $trajectory_folder_host:/output \
-            ghcr.io/norlab-ulaval/fomo-sdk:latest ijrr_to_mcap \
+            ghcr.io/norlab-ulaval/fomo-rust-sdk:sha-ef7b2d3 ijrr_to_mcap \
             --input /input --output /output \
             "${PREFIXED_TOPICS[@]}" \
-            --compress
+            --compress >&2
 
         # copy calibration files and ground truth data
-        info "Copying calibration files and ground truth data"
+        info "Copying calibration files and ground truth data" >&2
         cp -r $human_readable_folder_remote/calib $trajectory_folder_host
         cp $human_readable_folder_remote/gt.txt $trajectory_folder_host
 
         if [ ${COPY_MCAP_TO_REMOTE:-0} -eq 1 ]; then
-            info "Copying trajectory folder back to remote"
+            info "Copying trajectory folder back to remote" >&2
             rsync -rP $trajectory_folder_host $trajectory_destination_remote
         fi
     else
         local human_readable_folder_remote
         human_readable_folder_remote=$(generate_trajectory_path "$BASE_PATH_REMOTE"/ijrr "$deployment_folder" "$trajectory_name")
         if [ ! -d "$human_readable_folder_remote" ]; then
-            error "No plaintext remote trajectory folder found for deployment: $deployment_folder and trajectory: $trajectory_name"
+            error "No plaintext remote trajectory folder found for deployment: $deployment_folder and trajectory: $trajectory_name"  >&2
             return 0
         fi
         trajectory_folder_host="$BASE_PATH_HOST/$deployment_folder/$(basename $human_readable_folder_remote)"
@@ -213,7 +214,16 @@ stop_containers() {
 
         if [ -n "$slam_image" ]; then
             slam_label=$(generate_slam_label "$slam_image")
-            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml stop
+            # if the image is droidslam, use gpu:
+            if [[ "$slam_label" == *"droidslam"* ]]; then
+                RUN_SLAM_SERVICE="run_slam_gpu"
+            else
+                RUN_SLAM_SERVICE="run_slam"
+            fi
+            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml stop --timeout 10000 \
+                record_odometry \
+                ${RUN_SLAM_SERVICE}
+
         fi
     done
 
@@ -282,19 +292,9 @@ prepare_output_directory() {
         exit 1
     fi
 
-    info "Checking if the output directory: $OUTPUT_PATH_HOST already exists"
     if [ -d "$OUTPUT_PATH_HOST" ]; then
-        if [ "${OVERWRITE:-0}" -eq 1 ]; then
-            warn "Overwriting existing output directory"
-            rm -rf "$OUTPUT_PATH_HOST"
-        else
-            if [ "${RUN_SLAM:-0}" -eq 1 ]; then
-                error "Output directory already exists. Please remove it manually before proceeding with SLAM."
-                exit 1
-            else
-                info "Output directory already exists. Recomputing evaluation metrics..."
-            fi
-        fi
+    	info "Backing up existing output directory: $OUTPUT_PATH_HOST"
+        rsync -a -u "$OUTPUT_PATH_HOST/" "$OUTPUT_PATH_HOST.bak/"
     fi
     # Create the output directory for the new run
     mkdir -p "$OUTPUT_PATH_HOST"
@@ -321,7 +321,8 @@ save_slam_logs() {
             slam_label=$(generate_slam_label "$slam_image")
 
             # Determine processing path for this index
-            proc_path="${OUTPUT_PATH_HOST}/processing/${slam_label}/${MAPPING_DATE}"
+            proc_path="${PROCESSING_PATH_BASE}/${slam_label}/${MAPPING_DATE}"
+            echo "Saving logs from container "run_slam_${slam_label}" to ${proc_path}/${LOCALIZATION_DATE}.log"
 
             docker logs "run_slam_${slam_label}" > "${proc_path}/run_slam_${LOCALIZATION_DATE}.log" 2>/dev/null || true
         fi
@@ -344,7 +345,13 @@ start_slam_services() {
 
         if [ -n "$slam_image" ]; then
             slam_label=$(generate_slam_label "$slam_image")
-            info "Starting SLAM service $((i+1)): $slam_image (Label: $slam_label)"
+            # if the image is droidslam, use gpu:
+            if [[ "$slam_label" == *"droidslam"* ]]; then
+                RUN_SLAM_SERVICE="run_slam_gpu"
+            else
+                RUN_SLAM_SERVICE="run_slam"
+            fi
+            info "Starting SLAM service ${RUN_SLAM_SERVICE} [$((i+1))]: $slam_image (Label: $slam_label)"
 
             # Export variables for this specific SLAM instance
             export SLAM_IMAGE="$slam_image"
@@ -359,7 +366,9 @@ start_slam_services() {
             mkdir -p "$PROCESSING_PATH_HOST"
 
             # Launch the SLAM pair as a separate project
-            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml up -d --force-recreate --remove-orphans
+            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml up -d --force-recreate --remove-orphans \
+                record_odometry \
+                ${RUN_SLAM_SERVICE}
         fi
     done
 
@@ -603,4 +612,38 @@ eval_single_trajectory() {
 
     # Run trajectory evaluation
     run_evaluation
+}
+
+
+function get_missing_evaluations() {
+    path="$OUTPUT_PATH_HOST/results"
+
+    result_exist=()
+    for file_path in "$path"/**/*.txt; do
+        if [ ! -s "$file_path" ]; then
+            continue
+        fi
+        fname=$(basename "$file_path")
+        IFS="_-" read -r color y1 m1 d1 _ _ _ y2 m2 d2 _ <<< "${fname%.yaml}"
+
+        mapping_date="$y1-$m1-$d1"
+        localization_date="$y2-$m2-$d2"
+
+        run="${mapping_date}_${localization_date}"
+        if [[ ! " ${result_exist[*]} " =~ " ${run} " ]]; then
+            result_exist+=("$run")
+        fi
+    done
+
+    missing_combinations=()
+    for mapping_date in "${TARGET_DEPLOYMENTS[@]}"; do
+        for localization_date in "${TARGET_DEPLOYMENTS[@]}"; do
+            run="${mapping_date}_${localization_date}"
+            if [[ ! " ${result_exist[*]} " =~ " ${run} " ]] && [[ ! " ${missing_combinations[*]} " =~ " ${run} " ]]; then
+                missing_combinations+=("$run")
+            fi
+        done
+    done
+
+    printf '%s\n' "${missing_combinations[@]}"
 }
