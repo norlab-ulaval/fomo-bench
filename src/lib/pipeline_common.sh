@@ -321,8 +321,8 @@ save_slam_logs() {
             slam_label=$(generate_slam_label "$slam_image")
 
             # Determine processing path for this index
-            proc_path="${OUTPUT_PATH_HOST}/processing/${slam_label}/${MAPPING_DATE}"
-            echo "Saving logs from container "run_slam_${slam_label}" to ${proc_path}/run_slam_${LOCALIZATION_DATE}.log"
+            proc_path="${PROCESSING_PATH_BASE}/${slam_label}/${MAPPING_DATE}"
+            echo "Saving logs from container "run_slam_${slam_label}" to ${proc_path}/${LOCALIZATION_DATE}.log"
 
             docker logs "run_slam_${slam_label}" > "${proc_path}/run_slam_${LOCALIZATION_DATE}.log" 2>/dev/null || true
         fi
@@ -615,6 +615,22 @@ eval_single_trajectory() {
 }
 
 
+function normalize_date() {
+    local date="$1"
+    case "$date" in
+        "2025-01-30")
+            echo "2025-01-29"
+            ;;
+        "2025-03-14")
+            echo "2025-03-10"
+            ;;
+        *)
+            echo "$date"
+            ;;
+    esac
+}
+
+
 function get_missing_evaluations() {
     path="$OUTPUT_PATH_HOST/results"
 
@@ -628,6 +644,10 @@ function get_missing_evaluations() {
 
         mapping_date="$y1-$m1-$d1"
         localization_date="$y2-$m2-$d2"
+
+        # Normalize dates to match TARGET_DEPLOYMENTS naming
+        mapping_date=$(normalize_date "$mapping_date")
+        localization_date=$(normalize_date "$localization_date")
 
         run="${mapping_date}_${localization_date}"
         if [[ ! " ${result_exist[*]} " =~ " ${run} " ]]; then
