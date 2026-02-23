@@ -15,7 +15,7 @@ def generate_launch_description():
     odom_cov_injector = Node(
         executable="python3",
         arguments=[
-            os.path.join("ros2_ws", "src", "fuse", "odom_covariance_injector.py")
+            os.path.join("/ros2_ws", "src", "fuse", "odom_covariance_injector.py")
         ],
         name="odom_covariance_injector",
         output="screen",
@@ -23,7 +23,7 @@ def generate_launch_description():
             {"use_sim_time": True},
             {"input_topic": "/warthog/platform/odom"},
             {"output_topic": "/warthog/platform/odom_with_cov"},
-            {"twist_cov_vx": 0.05},
+            {"twist_cov_vx": 0.5},
             {"twist_cov_vyaw": 0.1},
         ],
     )
@@ -34,10 +34,10 @@ def generate_launch_description():
         executable="fixed_lag_smoother_node",
         name="fuse_node",
         output="screen",
-		remappings=[
-            ("odometry/filtered", f"{NAMESPACE}/estimated_odom"),
+        remappings=[
+            ("odom_filtered", f"{NAMESPACE}/estimated_odom"),
             ("vectornav/data", f"{NAMESPACE}/vectornav/data_unbiased"),
-		]
+        ],
         parameters=[
             os.path.join(share_dir, "config", "_fuse.yaml"),
             {"use_sim_time": True},

@@ -90,6 +90,5 @@ def generate_launch_description():
         ],
     )
     ld.add_action(bias_compensator_node)
-    ld.add_action(filter_madgwick_node)
 
     return ld
