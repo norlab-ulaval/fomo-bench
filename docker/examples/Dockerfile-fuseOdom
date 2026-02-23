@@ -1,4 +1,4 @@
-FROM ros:humble-ros-base
+FROM ros:jazzy-ros-base
 
 SHELL ["/bin/bash", "-c"]
 
@@ -14,9 +14,8 @@ RUN apt clean\
     && apt upgrade -y \
     && apt install -y \
     python3-pip curl git \
-    libgl1-mesa-glx \
-    ros-humble-rosbag2-storage-mcap \
-    ros-humble-foxglove-bridge \
+    ros-jazzy-rosbag2-storage-mcap \
+    ros-jazzy-foxglove-bridge \
     && apt clean
 
 WORKDIR /
@@ -24,19 +23,21 @@ WORKDIR /
 # create ros workspace and other folders
 RUN mkdir -p /ros2_ws/src
 
-RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
 RUN git clone https://github.com/norlab-ulaval/fuse.git --recurse-submodules /ros2_ws/src/fuse
-RUN git clone https://github.com/norlab-ulaval/fomo-bench.git -b ros2 /tmp/fomo-bench \
+RUN git clone https://github.com/norlab-ulaval/imu_tools.git -b fomo /ros2_ws/src/imu_tools
+RUN git clone https://github.com/norlab-ulaval/norlab_imu_tools.git -b fomo /ros2_ws/src/norlab_imu_tools
+RUN git clone https://github.com/norlab-ulaval/fomo-bench.git -b feat/fuse-proprioceptive-odom /tmp/fomo-bench \
     && mv /tmp/fomo-bench/ros_launchers /ros2_ws/src/ros_launchers
 
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
 RUN rosdep update
 RUN rosdep install --from-paths /ros2_ws/src --ignore-src -r -y
 RUN cd /ros2_ws/ \
-    && source /opt/ros/humble/setup.bash \
+    && source /opt/ros/jazzy/setup.bash \
     && colcon build --symlink-install
 
 STOPSIGNAL SIGINT
 # add additional commands here
-CMD ["/bin/bash", "-c", "source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && ros2 launch --noninteractive ros_launchers fuse.launch.py"]
+CMD ["/bin/bash", "-c", "source /opt/ros/jazzy/setup.bash && source /ros2_ws/install/setup.bash && ros2 launch --noninteractive ros_launchers fuse.launch.py"]
