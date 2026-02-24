@@ -2,8 +2,8 @@ fuse_node:
   ros__parameters:
     # Fixed-lag smoother configuration
     optimization_frequency: 40.0
-    transaction_timeout: 2.0
-    lag_duration: 0.1
+    transaction_timeout: 0.01
+    lag_duration: 0.5
 
     # Motion model - 3D omnidirectional
     motion_models:
@@ -13,11 +13,23 @@ fuse_node:
     omnidirectional_3d:
       # Process noise diagonal for 15D state vector
       # Order: x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az
-      process_noise_diagonal: [0.01, 0.01, 0.01,       # Position (x, y, z)
-                                0.01, 0.01, 0.01,       # Orientation (roll, pitch, yaw)
-                                0.05, 0.05, 0.05,       # Linear velocity (vx, vy, vz)
-                                0.05, 0.05, 0.05,       # Angular velocity (vroll, vpitch, vyaw)
-                                0.1, 0.1, 0.1]          # Linear acceleration (ax, ay, az)
+      process_noise_diagonal: [
+          0.01,
+          0.01,
+          0.01, # Position (x, y, z)
+          0.01,
+          0.01,
+          0.01, # Orientation (roll, pitch, yaw)
+          0.05,
+          0.05,
+          0.05, # Linear velocity (vx, vy, vz)
+          0.05,
+          0.05,
+          0.05, # Angular velocity (vroll, vpitch, vyaw)
+          0.1,
+          0.1,
+          0.1,
+        ] # Linear acceleration (ax, ay, az)
       buffer_length: 2.0
 
     # Sensor models
@@ -26,11 +38,11 @@ fuse_node:
         type: fuse_models::Omnidirectional3DIgnition
         motion_models: [omnidirectional_3d]
         ignition: true
-      
+
       odometry_sensor:
         type: fuse_models::Odometry3D
         motion_models: [omnidirectional_3d]
-      
+
       imu_sensor:
         type: fuse_models::Imu3D
         motion_models: [omnidirectional_3d]
@@ -39,37 +51,61 @@ fuse_node:
     initial_localization_sensor:
       publish_on_startup: true
       # Order: x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az
-      initial_state: [0.0, 0.0, 0.0,     # Position
-                      0.0, 0.0, 0.0,     # Orientation
-                      0.0, 0.0, 0.0,     # Linear velocity
-                      0.0, 0.0, 0.0,     # Angular velocity
-                      0.0, 0.0, 0.0]     # Linear acceleration
-      initial_sigma: [0.1, 0.1, 0.1,     # Position uncertainty
-                      0.1, 0.1, 0.1,     # Orientation uncertainty
-                      0.1, 0.1, 0.1,     # Linear velocity uncertainty
-                      0.1, 0.1, 0.1,     # Angular velocity uncertainty
-                      0.1, 0.1, 0.1]     # Linear acceleration uncertainty
+      initial_state: [
+          0.0,
+          0.0,
+          0.0, # Position
+          0.0,
+          0.0,
+          0.0, # Orientation
+          0.0,
+          0.0,
+          0.0, # Linear velocity
+          0.0,
+          0.0,
+          0.0, # Angular velocity
+          0.0,
+          0.0,
+          0.0,
+        ] # Linear acceleration
+      initial_sigma: [
+          0.1,
+          0.1,
+          0.1, # Position uncertainty
+          0.1,
+          0.1,
+          0.1, # Orientation uncertainty
+          0.1,
+          0.1,
+          0.1, # Linear velocity uncertainty
+          0.1,
+          0.1,
+          0.1, # Angular velocity uncertainty
+          0.1,
+          0.1,
+          0.1,
+        ] # Linear acceleration uncertainty
 
     # Odometry sensor - 3D wheel odometry
     # Fuses linear velocities from wheel encoders
     odometry_sensor:
-      topic: '/warthog/platform/odom_with_cov'
+      topic: "/warthog/platform/odom_with_cov"
       # topic: '/warthog/platform/odom'
       differential: false
       disable_checks: false
       # Fuse linear velocities in body frame (wheel encoders provide vx, vy)
-      linear_velocity_dimensions: ['x', 'y', 'z']
-      twist_target_frame: 'base_link'
+      linear_velocity_dimensions: ["x", "y", "z"]
+      twist_target_frame: "base_link"
 
     # IMU sensor - 3D inertial measurements
     # Fuses orientation, angular velocity, and linear acceleration
     imu_sensor:
-      topic: '/vectornav/data'
+      topic: "/vectornav/data"
       differential: false
       disable_checks: false
       # Fuse all 3D angular velocities and linear accelerations
-      angular_velocity_dimensions: ['roll', 'pitch', 'yaw']
-      twist_target_frame: 'base_link'
+      angular_velocity_dimensions: ["roll", "pitch", "yaw"]
+      twist_target_frame: "base_link"
 
     # Publisher - publishes 3D fused state estimate
     publishers:
@@ -77,9 +113,10 @@ fuse_node:
         type: fuse_models::Odometry3DPublisher
 
     filtered_publisher:
-      topic: 'odom_filtered'
-      base_link_frame_id: 'base_link'
-      odom_frame_id: 'odom'
-      world_frame_id: 'map'
+      topic: "odom_filtered"
+      base_link_frame_id: "base_link"
+      odom_frame_id: "odom"
+      world_frame_id: "map"
       publish_tf: false
-      publish_frequency: 50.0
+      publish_frequency: 10.0
+
