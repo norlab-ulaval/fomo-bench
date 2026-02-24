@@ -6,9 +6,6 @@ from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-from launch.actions import RegisterEventHandler, EmitEvent
-from launch.event_handlers import OnProcessExit
-from launch.events import Shutdown
 
 NAMESPACE = os.getenv("NAMESPACE")
 IS_MAPPING = os.getenv("IS_MAPPING")
@@ -31,12 +28,6 @@ def generate_launch_description():
         "use_sim_time", default_value="true", description="Use sim time"
     )
 
-    bag_file_arg = DeclareLaunchArgument(
-        "bag_file",
-        description="Path to the ROS 2 bag file to process",
-        default_value="",
-    )
-
     # Configuration
     orora_params_file = os.path.join(pkg_orora, "config", "orora_params.yaml")
 
@@ -44,10 +35,9 @@ def generate_launch_description():
     orora_node = Node(
         package="orora",
         namespace=NAMESPACE,
-        executable="orora_offline",
-        name="orora_offline",
+        executable="orora_odom",
+        name="orora_odom",
         output="screen",
-        arguments=[LaunchConfiguration("bag_file")],
         sigterm_timeout="60",  # Wait 60 seconds before escalating to SIGTERM
         sigkill_timeout="10",  # Wait 5 more seconds before SIGKILL
         parameters=[
@@ -87,29 +77,7 @@ def generate_launch_description():
         ],
         condition=IfCondition(LaunchConfiguration("do_slam")),
     )
-    shutdown_action = RegisterEventHandler(
-        event_handler=OnProcessExit(
-            target_action=orora_node, on_exit=[EmitEvent(event=Shutdown())]
-        )
-    )
-
-    odometry_logger = Node(
-        executable="python3",
-        arguments=[os.path.join("/fomo-bench/src/scripts", "odometry_logger.py")],
-        name="odometry_logger",
-        output="screen",
-    )
 
     return LaunchDescription(
-        [
-            bag_file_arg,
-            do_slam_arg,
-            sim_time_arg,
-            algorithm_arg,
-            dataset_arg,
-            orora_node,
-            sc_pgo_node,
-            shutdown_action,
-            odometry_logger,
-        ]
+        [do_slam_arg, sim_time_arg, algorithm_arg, dataset_arg, orora_node, sc_pgo_node]
     )

@@ -11,7 +11,7 @@ from std_msgs.msg import Header
 # --- Configuration ---
 # The directory where the trajectory file will be saved.
 # This path should be accessible from within your ROS container/environment.
-OUTPUT_PATH_DIR = "/trajectory_files"
+OUTPUT_PATH_DIR = "/output"
 # The name of the output file. It can be set via an environment variable.
 OUTPUT_FILE_NAME = os.getenv("OUTPUT_FILE_NAME", "estimated_trajectory.txt")
 if len(OUTPUT_FILE_NAME) == 0:
