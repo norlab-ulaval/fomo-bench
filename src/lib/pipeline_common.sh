@@ -46,6 +46,21 @@ generate_trajectory_path() {
     fi
 }
 
+function normalize_date() {
+    local date="$1"
+    case "$date" in
+        "2025-01-30")
+            echo "2025-01-29"
+            ;;
+        "2025-03-14")
+            echo "2025-03-10"
+            ;;
+        *)
+            echo "$date"
+            ;;
+    esac
+}
+
 verify_free_space() {
     #TODO finish this function
     return 0
@@ -628,6 +643,9 @@ function get_missing_evaluations() {
 
         mapping_date="$y1-$m1-$d1"
         localization_date="$y2-$m2-$d2"
+
+        mapping_date=$(normalize_date "$mapping_date")
+        localization_date=$(normalize_date "$localization_date")
 
         run="${mapping_date}_${localization_date}"
         if [[ ! " ${result_exist[*]} " =~ " ${run} " ]]; then
