@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/norlab-ulaval/fomo-bench/compare/fomo-bench-v1.1.0...fomo-bench-v1.1.1) (2026-02-24)
+
+
+### Bug Fixes
+
+* normalize dates for duplicate detection ([1e9f691](https://github.com/norlab-ulaval/fomo-bench/commit/1e9f691125faafa2349e49017dd352073dc32743))
+
 ## [1.1.0](https://github.com/norlab-ulaval/fomo-bench/compare/fomo-bench-v1.0.0...fomo-bench-v1.1.0) (2026-02-05)
 
 
