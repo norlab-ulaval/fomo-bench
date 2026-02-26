@@ -114,7 +114,7 @@ get_trajectory_rosbag() {
         # check if the trajectory mcap is already present on the remote
         if [ $COPY_EXISTING_MCAP -eq 1 ]; then
             local trajectory_folder_remote
-            trajectory_folder_remote=$(generate_trajectory_path "$BASE_PATH_REMOTE"/mcap/lidar "$deployment_folder" "$trajectory_name")
+            trajectory_folder_remote=$(generate_trajectory_path "$BASE_PATH_REMOTE"/mcap "$deployment_folder" "$trajectory_name")
             if [ -d "$trajectory_folder_remote" ]; then
                 # verify that there is enough space on the host
                 trajectory_destination_host="$BASE_PATH_HOST/$deployment_folder/"
@@ -558,8 +558,6 @@ eval_single_trajectory() {
                 # wait until play_bag is done
                 info "Waiting for play_bag to finish..."
                 $DOCKER_COMPOSE_CMD wait play_bag
-
-                sleep 300
 
                 # Stop all containers
                 stop_containers
