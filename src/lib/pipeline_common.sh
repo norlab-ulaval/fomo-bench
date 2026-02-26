@@ -599,12 +599,12 @@ eval_single_trajectory() {
                 done
 
                 if [ $retry_count -ge $max_retries ]; then
-                     error "Max retries reached. Aborting evaluation for this trajectory."
+                     error "Max retries reached. Aborting execution for this trajectory."
                      return 1
                 fi
 
                 retry_count=$((retry_count+1))
-                info "Retrying evaluation... (Attempt $((retry_count+1)))"
+                info "Retrying execution... (Attempt $((retry_count+1)))"
                 sleep 5
             fi
         done

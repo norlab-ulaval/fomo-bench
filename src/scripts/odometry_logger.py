@@ -3,7 +3,12 @@ import csv
 import os
 
 import rclpy
-from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovarianceStamped
+from geometry_msgs.msg import (
+    Pose,
+    PoseStamped,
+    PoseWithCovarianceStamped,
+    TransformStamped,
+)
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from std_msgs.msg import Header
@@ -80,9 +85,15 @@ class OdometryLogger(Node):
             self.pose_callback,
             10,  # QoS history depth
         )
+        self.subscription = self.create_subscription(
+            TransformStamped,
+            f"{namespace}/estimated_transform",
+            self.transform_callback,
+            10,  # QoS history depth
+        )
 
         self.get_logger().info(
-            f"Odometry logger started. Listening to {namespace}/estimated_odom and {namespace}/estimated_pose..."
+            f"Odometry logger started. Listening to {namespace}/estimated_odom, {namespace}/estimated_transform and {namespace}/estimated_pose..."
         )
 
         # Create throttled loggers for periodic messages
@@ -153,6 +164,24 @@ class OdometryLogger(Node):
             )
             return
         self.write_pose(msg.pose, msg.header)
+
+    def transform_callback(self, msg: TransformStamped):
+        """
+        This function is called every time a new message is received on the /estimated_pose topic.
+        """
+        if self.active_function is None:
+            self.active_function = self.pose_callback
+        elif self.active_function != self.pose_callback:
+            self.get_logger().warn(
+                f"Already logging data using {self.active_function.__qualname__} callback. Skipping."
+            )
+            return
+        pose = Pose()
+        pose.position.x = msg.transform.translation.x
+        pose.position.y = msg.transform.translation.y
+        pose.position.z = msg.transform.translation.z
+        pose.orientation = msg.transform.rotation
+        self.write_pose(pose, msg.header)
 
     def pose_with_covariance_callback(self, msg: PoseWithCovarianceStamped):
         """

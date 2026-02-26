@@ -9,7 +9,7 @@ services:
         environment:
             IS_MAPPING: ${IS_MAPPING:-0}
             STORAGE_PATH: /data
-            NAMESPACE: ${SLAM_LABEL}
+            NAMESPACE: ""
             IMU_TYPE: ${IMU_TYPE}
         volumes:
             - ${PROCESSING_PATH_HOST:-/tmp}:/data
@@ -33,7 +33,7 @@ services:
         environment:
             OUTPUT_FILE_NAME: ${OUTPUT_FILE_NAME}
             OUTPUT_PATH_HOST: ${OUTPUT_PATH_HOST}
-            NAMESPACE: ${SLAM_LABEL}
+            NAMESPACE: ""
         volumes:
             - ${OUTPUT_PATH_HOST:-/tmp}:/trajectory_files
 
