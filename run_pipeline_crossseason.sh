@@ -13,17 +13,18 @@ fi
 # --- Cross-Season Evaluation Configuration ---
 # Mapping deployments (rows in confusion matrix)
 MAPPING_DEPLOYMENTS=(
-    "2025-01-29"
     "2025-06-26"
     "2025-10-14"
+    "2025-01-29"
 )
 
 # Localization deployments (columns in confusion matrix)
 LOCALIZATION_DEPLOYMENTS=(
-    "2025-03-10"
     "2025-08-20"
     "2024-11-21"
+    "2025-03-10"
 )
+
 
 # --- Main Pipeline ---
 # Initialize pipeline and load environment

@@ -23,7 +23,7 @@ if IS_MAPPING:
     input_map_name = ""
     output_map_name = f"{STORAGE_PATH}/map.csv"
 else:
-    input_map_name = f"{STORAGE_PATH}/map.csv"
+    input_map_name = f"{STORAGE_PATH}"
     output_map_name = ""
 
 
@@ -97,7 +97,7 @@ def generate_launch_description():
             parameters=[
                 {
                     "use_sim_time": LaunchConfiguration("use_sim_time"),
-                    "initial_map_file_name": input_map_name,
+                    "initial_map_directory": input_map_name,
                     "final_trajectory_file_name": f"{STORAGE_PATH}/trajectory.txt",
                 },
                 kiss_icp_config,
