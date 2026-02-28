@@ -50,7 +50,7 @@ def generate_launch_description():
             package="norlab_icp_mapper_ros",
             executable="wheel_velocity_noise",
             name="wheel_velocity_noise",
-            namespace=NAMESPACE,
+            # namespace=NAMESPACE,
             output="screen",
             parameters=[
                 {
@@ -72,17 +72,17 @@ def generate_launch_description():
         parameters=[
             ekf_config_file,
             {
-                "use_sim_time": LaunchConfiguration("use_sim_time"),
+                "use_sim_time": True,
             },
         ],
-        remappings=[("odometry/filtered", "ekf/odom"), ("/tf", f"/{NAMESPACE}/tf")],
+        remappings=[("odometry/filtered", "ekf/odom")],
     )
 
     mapping_node = Node(
         package="norlab_icp_mapper_ros",
         executable="mapper_node",
         name="mapper_node",
-        namespace=NAMESPACE,
+        # namespace=NAMESPACE,
         output="screen",
         sigterm_timeout="60",  # Wait 60 seconds before escalating to SIGTERM
         sigkill_timeout="10",  # Wait 10 more seconds before SIGKILL
@@ -99,7 +99,7 @@ def generate_launch_description():
         ],
         parameters=[
             {
-                "use_sim_time": LaunchConfiguration("use_sim_time"),
+                "use_sim_time": True,
                 "odom_frame": "odom",
                 "robot_frame": "base_link",
                 "mapping_config": os.path.join(
@@ -128,7 +128,6 @@ def generate_launch_description():
             ("scan_after_input_filters", f"/{LIDAR_TYPE}/points_after_input_filters"),
             ("scan_after_deskew", f"/{LIDAR_TYPE}/points_after_deskew"),
             ("icp_odom", "estimated_odom"),
-            ("/tf", "tf"),
         ],
     )
 

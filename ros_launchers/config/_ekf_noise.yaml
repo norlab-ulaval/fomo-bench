@@ -1,7 +1,7 @@
 /**:
   ekf_odom_node:
     ros__parameters:
-      frequency: 50.0
+      frequency: 30.0
       sensor_timeout: 0.1
       two_d_mode: false
       transform_time_offset: 0.0
@@ -37,7 +37,8 @@
           0.0,
         ]
 
-      odom0: /warthog/platform/odom_noise
+      # odom0: /warthog/platform/odom_noisy
+      odom0: /warthog/platform/odom
       odom0_config: [
           false,
           false,
@@ -60,7 +61,7 @@
       odom0_differential: false
       odom0_relative: false
 
-      imu0: /icpmapper/vectornav/data
+      imu0: /vectornav/data
       imu0_config: [
           false,
           false,

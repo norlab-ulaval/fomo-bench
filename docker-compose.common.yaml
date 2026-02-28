@@ -34,7 +34,7 @@ services:
             - ${SLAM_CONFIG_OVERRIDE_FILE:-./config/slam/override_config.yaml.example}:/config/override.yaml
             - ${CALIB_PATH_HOST}:/calib
             # Data volume defined in child
-            - ./ros_launchers/launch:/ros2_ws/src/ros_launchers/launch
+            - ./ros_launchers:/ros2_ws/src/ros_launchers
         deploy:
             resources:
                 limits:

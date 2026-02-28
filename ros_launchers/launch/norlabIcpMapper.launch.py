@@ -113,7 +113,6 @@ def generate_launch_description():
             ("scan_after_input_filters", f"/{LIDAR_TYPE}/points_after_input_filters"),
             ("scan_after_deskew", f"/{LIDAR_TYPE}/points_after_deskew"),
             ("icp_odom", "estimated_odom"),
-            ("/tf", "tf"),
         ],
     )
 
