@@ -42,7 +42,7 @@ def generate_launch_description():
         package="norlab_imu_tools",
         executable="imu_bias_compensator_node",
         name="bias_compensator",
-        # namespace=NAMESPACE,
+        namespace=NAMESPACE,
         parameters=[
             config_file,
             {
@@ -56,6 +56,7 @@ def generate_launch_description():
             ("imu_topic_in", f"/{IMU_TYPE}/data_raw"),
             ("bias_topic_in", f"/{IMU_TYPE}/bias"),
             ("imu_topic_out", f"{IMU_TYPE}/data_unbiased"),
+            ("/tf", "tf"),
         ],
         arguments=[
             "--ros-args",
@@ -68,7 +69,7 @@ def generate_launch_description():
         package="imu_filter_madgwick",
         executable="imu_filter_madgwick_node",
         name="madgwick_filter",
-        # namespace="",
+        namespace=NAMESPACE,
         output="both",
         parameters=[
             config_file,
@@ -78,6 +79,7 @@ def generate_launch_description():
             ("imu/data_raw", f"{IMU_TYPE}/data_unbiased"),
             ("imu/mag", f"{IMU_TYPE}/mag"),
             ("imu/data", f"{IMU_TYPE}/data"),
+            ("/tf", "tf"),
         ],
         arguments=[
             "--ros-args",

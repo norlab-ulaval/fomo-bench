@@ -331,13 +331,13 @@ save_slam_logs() {
 
 # Start SLAM services and verify they're running
 start_slam_services() {
-    if [[ $MAPPING_DATE == $LOCALIZATION_DATE ]]; then
-        info "Setting mapping to 1"
-        export IS_MAPPING=1
-    else
-        info "Setting mapping to 0"
-        export IS_MAPPING=0
-    fi
+    # if [[ $MAPPING_DATE == $LOCALIZATION_DATE ]]; then
+    #     info "Setting mapping to 1"
+    #     export IS_MAPPING=1
+    # else
+    #     info "Setting mapping to 0"
+    #     export IS_MAPPING=0
+    # fi
 
     # Dynamically start SLAM services
     for i in "${!SLAM_IMAGES[@]}"; do
