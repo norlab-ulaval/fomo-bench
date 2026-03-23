@@ -13,6 +13,8 @@ services:
             IMU_TYPE: ${IMU_TYPE}
         volumes:
             - ${PROCESSING_PATH_HOST:-/tmp}:/data
+            - /home/mbo/legs_ws/fomo-bench/ros_launchers:/ros2_ws/src/ros_launchers
+            - /home/mbo/legs_ws/src/droid_slam_ros/ros_node.py:/ros2_ws/src/legs_ros_ws/droid_slam_ros/ros_node.py
 
     run_slam_gpu:
         extends:

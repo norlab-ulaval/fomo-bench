@@ -220,7 +220,7 @@ stop_containers() {
             else
                 RUN_SLAM_SERVICE="run_slam"
             fi
-            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml stop --timeout 10000 \
+            docker compose -p "fomo-slam-${slam_label}" -f docker-compose.slam.yaml stop --timeout 10 \
                 record_odometry \
                 ${RUN_SLAM_SERVICE}
 

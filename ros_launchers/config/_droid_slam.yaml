@@ -1,22 +1,23 @@
 /**:
-  droid_node:
-    ros__parameters:
-      image_size: [240, 320]
-      disable_vis: true
-      buffer: 6000
-      upsample: false
-      t0: 0
-      stride: 3
-      beta: 0.3
-      filter_thresh: 2.0
-      warmup: 4
-      keyframe_thresh: 4.0
-      frontend_thresh: 16.0
-      frontend_window: 50
-      frontend_radius: 2
-      frontend_nms: 1
-      backend_thresh: 22.0
-      backend_radius: 2
-      backend_nms: 3
-      reconstruction_path: ""
-      datapath: "/tmp"
+    droid_node:
+        ros__parameters:
+            image_size: [240, 320]
+            disable_vis: true
+            buffer: 20000
+            upsample: false
+            t0: 0
+            stride: 1
+            beta: 0.3
+            filter_thresh: 2.0
+            warmup: 4
+            keyframe_thresh: 6.0
+            frontend_thresh: 16.0
+            frontend_window: 50
+            frontend_radius: 2
+            frontend_nms: 1
+            backend_thresh: 22.0
+            backend_radius: 2
+            backend_nms: 15
+            reconstruction_path: ""
+            datapath: "/tmp"
+            pgo: false

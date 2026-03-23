@@ -72,8 +72,8 @@ def generate_launch_description():
         name="orbslam3_stereo",
         namespace=NAMESPACE,
         output="screen",
-        sigterm_timeout="60",  # Wait 30 seconds before escalating to SIGTERM
-        sigkill_timeout="10",  # Wait 5 more seconds before SIGKILL
+        sigterm_timeout="600",  # Wait 30 seconds before escalating to SIGTERM
+        sigkill_timeout="100",  # Wait 5 more seconds before SIGKILL
         arguments=[
             "--ros-args",
             "--log-level",
